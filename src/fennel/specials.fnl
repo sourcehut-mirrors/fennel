@@ -298,6 +298,11 @@ and lacking args will be nil, use lambda for arity-checked functions." true)
   (assert utils.root.options.useMetadata
           "can't look up doc with metadata disabled.")
   (compiler.assert (= (length ast) 2) "expected one argument" ast)
+  ;; if path-sep is \, we'll replace all bare instances of \n with \r\n
+  (local normalize-newlines (if (not= "\\" (string.sub package.config 1 1))
+                              #$ ; identity fn
+                              #(string.gsub $ "([^\r]?)\n"
+                                            (if (= 0 ($1:len)) "\r\n" (.. $1 "\r\n")))))
   (let [target (utils.deref (. ast 2))
         special-or-macro (or (. scope.specials target) (. scope.macros target))]
     (if special-or-macro
@@ -308,7 +313,7 @@ and lacking args will be nil, use lambda for arity-checked functions." true)
           ;; declared from.
           (: "print(require('%s').doc(%s, '%s'))" :format
              (or utils.root.options.moduleName :fennel) (tostring value)
-             (tostring (. ast 2)))))))
+             (normalize-newlines (tostring (. ast 2))))))))
 
 (doc-special :doc [:x]
              "Print the docstring and arglist for a function, macro, or special form.")

@@ -4,7 +4,6 @@
 
 (local doc-env (setmetatable {:print #$ :fennel fennel}
                              {:__index _G}))
-
 (local cases
        [["(doc doc)" "(doc x)\n  Print the docstring and arglist for a function, macro, or special form." "docstrings for special forms"]
         ["(doc doto)" "(doto val ...)\n  Evaluates val and splices it into the first argument of subsequent forms." "docstrings for built-in macros" ]
@@ -29,6 +28,9 @@
 
 (fn test-docstrings []
   (each [_ [code expected msg] (ipairs cases)]
+    ;; when test is running on windows, we expect the docstrings to output with CRLF
+    (when (= "\\" (string.sub package.config 1 1))
+      (set-forcibly! expected (string.gsub expected "\n" "\r\n")))
     (l.assertEquals (eval code) expected msg)))
 
 (fn test-no-undocumented []
