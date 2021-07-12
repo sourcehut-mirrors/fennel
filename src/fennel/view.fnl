@@ -222,6 +222,10 @@ as numeric escapes rather than letter-based escapes, which is ugly."
       (tset defaults k v))
     defaults))
 
+(fn pp-function [f options]
+  (match (pcall require (or options.fennel-module-name :fennel))
+    (true fennel) (fennel.metadata:get f "fnl/source")))
+
 (set pp (fn [x options indent colon?]
           ;; main serialization loop, entry point is defined below
           (let [indent (or indent 0)
@@ -242,7 +246,9 @@ as numeric escapes rather than letter-based escapes, which is ugly."
                 (pp-string x options indent)
                 (or (= tv :boolean) (= tv :nil))
                 (tostring x)
-                (.. "#<" (tostring x) ">")))))
+                (or (and (= tv :function)
+                         (pp-function x options))
+                    (.. "#<" (tostring x) ">"))))))
 
 (fn view [x options]
   "Return a string representation of x.

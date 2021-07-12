@@ -181,7 +181,7 @@ Main purpose to print function argument list in docstring."
             (: :gsub "\"" "\\\""))
         (tostring x))))
 
-(fn set-fn-metadata [arg-list docstring parent fn-name]
+(fn set-fn-metadata [arg-list docstring parent fn-name ast]
   (when utils.root.options.useMetadata
     (let [args (utils.map arg-list #(: "\"%s\"" :format (deep-tostring $)))
           meta-fields ["\"fnl/arglist\"" (.. "{" (table.concat args ", ") "}")]]
@@ -194,6 +194,10 @@ Main purpose to print function argument list in docstring."
                                           (: :gsub "\n" "\\n")
                                           (: :gsub "\"" "\\\""))
                                       "\"")))
+      (when true ;utils.root.options.useSourceMetadata
+        (table.insert meta-fields "\"fnl/source\"")
+        (let [source-str (string.gsub (view (view ast)) "\n" "\\n")]
+          (table.insert meta-fields source-str)))
       (let [meta-str (: "require(\"%s\").metadata" :format
                         (or utils.root.options.moduleName :fennel))]
         (compiler.emit parent
@@ -221,7 +225,7 @@ Main purpose to print function argument list in docstring."
                  ast)
   (compiler.emit parent f-chunk ast)
   (compiler.emit parent :end ast)
-  (set-fn-metadata arg-list docstring parent fn-name)
+  (set-fn-metadata arg-list docstring parent fn-name ast)
   (utils.hook :fn ast f-scope)
   (utils.expr fn-name :sym))
 
