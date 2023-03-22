@@ -339,7 +339,7 @@
             len (validate-utf8 str nexti)]
         (table.insert output (string.sub str index (+ nexti (or len 0) -1)))
         (when (and (not len) (<= nexti (length str)))
-          (table.insert output (string.format "\\%03d" (string.byte str nexti))))
+          (table.insert output (string.format "\\%03o" (string.byte str nexti))))
         (set index (if len (+ nexti len) (+ nexti 1)))))
     (table.concat output)))
 
@@ -359,7 +359,7 @@ as numeric escapes rather than letter-based escapes, which is ugly."
                             :\ "\\\\"
                             "\"" "\\\""
                             "\n" (if esc-newline? "\\n" "\n")}
-                           {:__index #(: "\\%03d" :format ($2:byte))})
+                           {:__index #(: "\\%03o" :format ($2:byte))})
         str (.. "\"" (str:gsub "[%c\\\"]" escs) "\"")]
     (if (getopt options :utf8?)
         (utf8-escape str)
