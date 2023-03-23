@@ -69,7 +69,8 @@
 
 (fn test-escapes []
   (l.assertEquals (view ["\a" "\t"]) "[\"\\a\" \"\\t\"]")
-  (l.assertEquals (view "[\7-\13]") "\"[\\a-\\r]\""))
+  (l.assertEquals (view "[\7-\13]") "\"[\\a-\\r]\"")
+  (l.assertEquals (view  ["\027"] {:escape-fmt :hex}) "[\"\\x1b\"]"))
 
 (fn test-gaps []
   (l.assertEquals (view {967216353 788}) "{967216353 788}"))
