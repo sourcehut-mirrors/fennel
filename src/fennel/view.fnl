@@ -291,11 +291,6 @@
   ;; Test if given string is valid colon string.
   (s:find "^[-%w?^_!$%&*+./@|<=>]+$"))
 
-(local escape-formats
-  (setmetatable {:hex "\\x%02x" :dec "\\%03d"}
-                {:__index #(error (: "escape-fmt \"%s\" can only be hex or dec"
-                                     :format $2))}))
-
 (local utf8-inits
   [{:min-byte 0x00 :max-byte 0x7f
     :min-code 0x00 :max-code 0x7f
@@ -310,8 +305,12 @@
     :min-code 0x10000 :max-code 0x10ffff
     :len 4}])
 
+(fn byte-escape [byte options]
+  (case (getopt options :byte-escape)
+    byte-escape (byte-escape byte options)
+    _ (: "%03d" :format byte)))
+
 (fn utf8-escape [str options]
-  (local esc-enc (. escape-formats (or (getopt options :escape-fmt) :dec)))
   ;; return nil if invalid utf8, if not return the length
   ;; TODO: use native utf8 library if possible
   (fn validate-utf8 [str index]
@@ -345,7 +344,7 @@
             len (validate-utf8 str nexti)]
         (table.insert output (string.sub str index (+ nexti (or len 0) -1)))
         (when (and (not len) (<= nexti (length str)))
-          (table.insert output (string.format esc-enc (string.byte str nexti))))
+          (table.insert output (byte-escape (string.byte str nexti) options)))
         (set index (if len (+ nexti len) (+ nexti 1)))))
     (table.concat output)))
 
@@ -356,7 +355,6 @@ as numeric escapes rather than letter-based escapes, which is ugly."
   (let [len (length* str)
         esc-newline? (or (< len 2) (and (getopt options :escape-newlines?)
                                         (< len (- options.line-length indent))))
-        esc-enc (. escape-formats (or (getopt options :escape-fmt) :dec))
         escs (setmetatable {"\a" "\\a"
                             "\b" "\\b"
                             "\f" "\\f"
@@ -366,7 +364,7 @@ as numeric escapes rather than letter-based escapes, which is ugly."
                             :\ "\\\\"
                             "\"" "\\\""
                             "\n" (if esc-newline? "\\n" "\n")}
-                           {:__index #(: esc-enc :format ($2:byte))})
+                           {:__index #(byte-escape ($2:byte) options)})
         str (.. "\"" (str:gsub "[%c\\\"]" escs) "\"")]
     (if (getopt options :utf8?)
         (utf8-escape str options)

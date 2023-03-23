@@ -371,6 +371,9 @@ instead these options are accepted:
 * `empty-as-sequence?` (default: false) render empty tables as []
 * `line-length` (number, default: 80) length of the line at which
   multi-line output for tables is forced
+* `byte-escape` (function) If present, overrides default behavior of escaping special
+characters in decimal format (e.g. `<ESC>` -> `\027`). Called with the signature
+`(byte-escape byte view-opts)`, where byte is the char code for a special character
 * `escape-newlines?` (default: false) emit strings with \\n instead of newline
 * `prefer-colon?` (default: false) emit strings in colon notation when possible
 * `utf8?` (default true) whether to use utf8 module to compute string lengths
