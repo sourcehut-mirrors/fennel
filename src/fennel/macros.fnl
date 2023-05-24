@@ -356,12 +356,7 @@ With a second argument, returns expanded form as a string instead of printing."
   (let [handle (if return? `do `print)]
     `(,handle ,(view (macroexpand form _SCOPE)))))
 
-(fn import-macros* [binding1 module-name1 ...]
-  "Bind a table of macros from each macro module according to a binding form.
-Each binding form can be either a symbol or a k/v destructuring table.
-Example:
-  (import-macros mymacros                 :my-macros    ; bind to symbol
-                 {:macro1 alias : macro2} :proj.macros) ; import by name"
+(fn import-or-extract-macros* [operation binding1 module-name1 ...]
   (assert (and binding1 module-name1 (= 0 (% (select "#" ...) 2)))
           "expected even number of binding/modulename pairs")
   (for [i 1 (select "#" binding1 module-name1 ...) 2]
@@ -373,7 +368,7 @@ Example:
           ;; if the module-name is an expression (and not just a string) we
           ;; patch our expression to have the correct source filename so
           ;; require-macros can pass it down when resolving the module-name.
-          expr `(import-macros ,modname)
+          expr `(,(sym operation) ,modname)
           filename (if (list? modname) (. modname 1 :filename) :unknown)
           _ (tset expr :filename filename)
           macros* (_SPECIALS.require-macros expr scope {} binding)]
@@ -388,6 +383,23 @@ Example:
                         (tostring modname)))
             (tset scope.macros import-key (. macros* macro-name))))))
   nil)
+
+(fn import-macros* [binding1 module-name1 ...]
+   "Bind a table of macros from each macro module according to a binding form.
+Each binding form can be either a symbol or a k/v destructuring table.
+Example:
+  (import-macros mymacros                 :my-macros    ; bind to symbol
+                 {:macro1 alias : macro2} :proj.macros) ; import by name"
+   (import-or-extract-macros* :import-macros binding1 module-name1 ...))
+
+(fn extract-macros* [binding1 module-name1 ...]
+   "Bind a table of macros extracted from the top-level scope of each module
+according to a binding form. Each binding form can be either a symbol or a k/v
+destructuring table.
+Example:
+  (extract-macros mymacros                 :my-normal-module ; bind to symbol
+                  {:macro1 alias : macro2} :lib.data) ; import by name"
+   (import-or-extract-macros* :extract-macros binding1 module-name1 ...))
 
 {:-> ->*
  :->> ->>*
@@ -409,4 +421,5 @@ Example:
  :pick-values pick-values*
  :macro macro*
  :macrodebug macrodebug*
- :import-macros import-macros*}
+ :import-macros import-macros*
+ :extract-macros extract-macros*}

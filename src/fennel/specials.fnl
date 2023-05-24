@@ -1205,11 +1205,9 @@ table.insert(package.loaders or package.searchers, fennel.searcher)"
 
 (local macro-searchers [fennel-macro-searcher lua-macro-searcher])
 
-(fn search-macro-module [modname n]
-  (match (. macro-searchers n)
-    f (match (f modname)
-        (loader ?filename) (values loader ?filename)
-        _ (search-macro-module modname (+ n 1)))))
+(fn search-macro-module [modname]
+  (accumulate [(loader filename) nil _ f (ipairs macro-searchers) &until loader]
+    (f modname)))
 
 (fn sandbox-fennel-module [modname]
   "Let limited Fennel module thru with safe fields."
@@ -1227,7 +1225,7 @@ table.insert(package.loaders or package.searchers, fennel.searcher)"
 It ensures that compile-scoped modules are loaded differently from regular
 modules in the compiler environment."
                     (or (. macro-loaded modname) (sandbox-fennel-module modname)
-                        (let [(loader filename) (search-macro-module modname 1)]
+                        (let [(loader filename) (search-macro-module modname)]
                           (compiler.assert loader (.. modname " module not found."))
                           (tset macro-loaded modname (loader modname filename))
                           (. macro-loaded modname)))))
@@ -1251,23 +1249,44 @@ modules in the compiler environment."
         modname-chunk (load-code modexpr)]
     (modname-chunk module-name filename)))
 
+(fn macros-from-module [ast modname]
+  (let [filename (compiler.assert (search-module modname)
+                                  (.. "extract-macros: unable to resolve module '"
+                                      modname "'") ast)
+        src (with-open [fin (io.open filename)] (fin:read :*a))
+        c-opts (doto (utils.copy utils.root.options)
+                     (tset :scope (compiler.make-scope))
+                     (tset :requireAsInclude false)
+                     (tset :filename filename)
+                     (tset :moduleName modname))]
+    (compiler.compile-string src c-opts)
+    (collect [k v (pairs c-opts.scope.macros)] (values k v))))
+
 (fn SPECIALS.require-macros [ast scope parent ?real-ast]
   (compiler.assert (= (length ast) 2) "Expected one module name argument"
                    (or ?real-ast ast)) ; real-ast comes from import-macros
-  (let [modname (resolve-module-name ast scope parent {})]
+  (let [caller (tostring (. ast 1))
+        modname (resolve-module-name ast scope parent {})
+        ;; prefix extract-macros in macro-loaded to avoid naming collisions
+        ;; between macro modules and macros extracted from normal modules
+        macro-key (if (= caller :extract-macros)
+                      (.. "extract:" modname)
+                      modname)]
     (compiler.assert (utils.string? modname)
                      "module name must compile to string" (or ?real-ast ast))
     (when (not (. macro-loaded modname))
-      (let [(loader filename) (search-macro-module modname 1)]
-        (compiler.assert loader (.. modname " module not found.") ast)
-        (tset macro-loaded modname
-              (compiler.assert (utils.table? (loader modname filename))
-                               "expected macros to be table" (or ?real-ast ast)))))
-    ;; if we're called from import-macros, return the modname, else add them
-    ;; to scope directly
-    (if (= :import-macros (tostring (. ast 1)))
-        (. macro-loaded modname)
-        (add-macros (. macro-loaded modname) ast scope parent))))
+      (if (= :extract-macros caller)
+        (tset macro-loaded macro-key (macros-from-module ast modname))
+        (let [(loader filename) (search-macro-module modname)]
+          (compiler.assert loader (.. modname " module not found.") ast)
+          (tset macro-loaded macro-key
+                (compiler.assert (utils.table? (loader modname filename))
+                                 "expected macros to be table" (or ?real-ast ast))))))
+    ;; if we're called from import-macros or extract-macros, return the modname;
+    ;; else add them to scope directly
+    (if (or (= :import-macros caller) (= :extract-macros caller))
+        (. macro-loaded macro-key)
+        (add-macros (. macro-loaded macro-key) ast scope parent))))
 
 (doc-special :require-macros [:macro-module-name]
              "Load given module and use its contents as macro definitions in current scope.

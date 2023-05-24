@@ -65,6 +65,14 @@
         "(quote nest)" ""
         {:compiler-env env :env env})))
 
+(fn test-extract-macros []
+  (== (do (extract-macros m :test.mod.module-with-macros) (var x 1) (m.inc! x 2) (m.inc! x) x) 4)
+  (== (do (extract-macros test :test.mod.module-with-macros
+                         {:inc INC} :test.mod.module-with-macros)
+        (INC (test.inc 5))) 7)
+  (== (do (extract-macros {: greet} :test.mod.module-with-macros) (greet :fennel))
+      "Hi, fennel"))
+
 (fn test-import-macros []
   (== (do (import-macros m :test.macros) (m.multigensym)) 519)
   (== (do (import-macros m :test.macros) (var x 1) (m.inc! x 2) (m.inc! x) x) 4)
@@ -728,6 +736,7 @@
 {: test-arrows
  : test-doto
  : test-?.
+ : test-extract-macros
  : test-import-macros
  : test-require-macros
  : test-relative-macros
