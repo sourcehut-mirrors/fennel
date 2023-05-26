@@ -63,7 +63,7 @@
 (fn test-macro-completion []
   (let [(send comp) (wrap-repl)]
     (send "(local mac {:incremented 9 :unsanitary 2})")
-    (send "(import-macros mac :test.macros)")
+    (send "(import-macros mac :test.mod.macros)")
     (let [[c1 c2 c3] (doto (comp "mac.i") table.sort)]
       ;; local should be shadowed!
       (t.not= c1 "mac.incremented")
@@ -111,12 +111,12 @@
 
 (fn test-reload-macros []
   (let [send (wrap-repl)]
-    (tset fennel.macro-loaded :test/macros {:inc #(error :lol)})
-    (t.is (not (pcall fennel.eval "(import-macros m :test/macros) (m.inc 1)")))
-    (send ",reload test/macros")
+    (tset fennel.macro-loaded :test/mod/macros {:inc #(error :lol)})
+    (t.is (not (pcall fennel.eval "(import-macros m :test/mod/macros) (m.inc 1)")))
+    (send ",reload test/mod/macros")
     (t.is (pcall fennel.eval
-                         "(import-macros m :test/macros) (m.inc 1)"))
-    (tset fennel.macro-loaded :test/macros nil)))
+                         "(import-macros m :test/mod/macros) (m.inc 1)"))
+    (tset fennel.macro-loaded :test/mod/macros nil)))
 
 (fn test-reset []
   (let [send (wrap-repl)
@@ -264,11 +264,11 @@
         ["(macro boo [] '(fn foo [...] [] 1)) (macrodebug (boo) true)" "(fn foo [...] {} 1)" "non-metadata tables are not removed" ]
         ["(macro boo [] (let [mt [1 2 3]] '(fn foo [...] ,mt 1))) (macrodebug (boo) true)" "(fn foo [...] [1 2 3] 1)" "non-static non-metadata tables are not removed" ]
         [",doc macro-doesnt-exist" "macro-doesnt-exist not found" ",doc should report when failing to look up a sym"]
-        ["(import-macros m :test.macros) ,doc m.inc" "(m.inc n)\n  Increments n by 1" ",doc should work on macro tables"]])
+        ["(import-macros m :test.mod.macros) ,doc m.inc" "(m.inc n)\n  Increments n by 1" ",doc should work on macro tables"]])
 
 (fn test-docstrings []
   (let [send (wrap-repl)]
-    (tset fennel.macro-loaded :test.macros nil)
+    (tset fennel.macro-loaded :test.mod.macros nil)
     (each [_ [code expected msg] (ipairs doc-cases)]
       (t.= (table.concat (send code)) expected msg))))
 

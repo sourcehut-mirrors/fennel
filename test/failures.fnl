@@ -40,7 +40,7 @@
   (assert-fail (do (local a-b 1) (global a_b 2))
                "global a_b conflicts with local")
   (assert-fail (do ((fn []
-                      (require-macros :test.macros)
+                      (require-macros :test.mod.macros)
                       (global x1 (->1 99 (+ 31)))))
                    (->1 23 (+ 1)))
                "unknown identifier")
@@ -75,13 +75,13 @@
     "expected each macro to be function"
     "(macro m [] (getmetatable :foo)) (m)"
     "Illegal metatable"
-    "(import-macros test :test.macros) (test.asdf)"
+    "(import-macros test :test.mod.macros) (test.asdf)"
     "macro not found in imported macro module"
     ;; macros should shadow locals as values, not just when calling:
-    "(let [t {:b 2}] (import-macros t :test.macros) t.b)"
+    "(let [t {:b 2}] (import-macros t :test.mod.macros) t.b)"
     "tried to reference a macro"
-    "(import-macros {: asdf} :test.macros)"
-    "macro asdf not found in module test.macros"
+    "(import-macros {: asdf} :test.mod.macros)"
+    "macro asdf not found in module test.mod.macros"
     "(import-macros m :test.bad.macro-no-return-table)"
     "expected macros to be table"
     "(macros {:noop #nil} {:identity #$})" "Expected one table argument"
@@ -178,13 +178,13 @@
     "(match [1] (where (or [_ a] [a b])) b)" "unknown identifier"}))
 
 (fn test-macro []
-  (let [code "(import-macros {: fail-one} :test.macros) (fail-one 1)"
+  (let [code "(import-macros {: fail-one} :test.mod.macros) (fail-one 1)"
         (ok? msg) (pcall fennel.compileString code)]
     (t.is (not ok?))
-    (t.match "test/macros.fnl:3: oh no" msg)
+    (t.match "test/mod/macros.fnl:3: oh no" msg)
     ;; sometimes it's "in function f" and sometimes "in upvalue f"
-    (t.match ".*test/macros.fnl:3: in %w+ 'def'.*" msg)
-    (t.match ".*test/macros.fnl:4: in %w+ 'abc'.*" msg))
+    (t.match ".*test/mod/macros.fnl:3: in %w+ 'def'.*" msg)
+    (t.match ".*test/mod/macros.fnl:4: in %w+ 'abc'.*" msg))
   (let [(ok? msg) (pcall fennel.eval "(require-macros 100)")]
     (t.is (not ok?))
     (t.match ".*module name must compile to string.*" msg)))

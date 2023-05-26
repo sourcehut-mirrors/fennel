@@ -74,19 +74,19 @@
       "Hi, fennel"))
 
 (fn test-import-macros []
-  (== (do (import-macros m :test.macros) (m.multigensym)) 519)
-  (== (do (import-macros m :test.macros) (var x 1) (m.inc! x 2) (m.inc! x) x) 4)
-  (== (do (import-macros test :test.macros {:inc INC} :test.macros)
+  (== (do (import-macros m :test.mod.macros) (m.multigensym)) 519)
+  (== (do (import-macros m :test.mod.macros) (var x 1) (m.inc! x 2) (m.inc! x) x) 4)
+  (== (do (import-macros test :test.mod.macros {:inc INC} :test.mod.macros)
           (INC (test.inc 5))) 7)
-  (== (do (import-macros {:defn1 defn : ->1} :test.macros)
+  (== (do (import-macros {:defn1 defn : ->1} :test.mod.macros)
           (defn join [sep ...] (table.concat [...] sep))
           (join :: :num (->1 5 (* 2) (+ 8))))
       "num:18")
-  (== (do (import-macros {: unsandboxed} :test.macros) (unsandboxed))
+  (== (do (import-macros {: unsandboxed} :test.mod.macros) (unsandboxed))
       "[\"no\" \"sandbox\"]" "should disable sandbox" {:compiler-env _G})
-  (let [not-unqualified "(import-macros hi :test.macros) (print (inc 1))"]
+  (let [not-unqualified "(import-macros hi :test.mod.macros) (print (inc 1))"]
     (t.is (not (pcall fennel.eval not-unqualified))))
-  (== 2 (do (import-macros {: gensym-shadow} :test.macros) (gensym-shadow))))
+  (== 2 (do (import-macros {: gensym-shadow} :test.mod.macros) (gensym-shadow))))
 
 (fn test-macro-path []
   (== (do (import-macros m :test.other-macros) (m.m)) "testing macro path"))
@@ -104,8 +104,8 @@
     (t.= val 2)))
 
 (fn test-require-macros []
-  (== (do (require-macros :test.macros) (->1 9 (+ 2) (* 11))) 121)
-  (== (do (require-macros :test.macros)
+  (== (do (require-macros :test.mod.macros) (->1 9 (+ 2) (* 11))) 121)
+  (== (do (require-macros :test.mod.macros)
           (defn1 hui [x y] (global z (+ x y))) (hui 8 4) z) 12))
 
 (fn test-inline-macros []
