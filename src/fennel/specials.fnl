@@ -1249,11 +1249,8 @@ modules in the compiler environment."
         modname-chunk (load-code modexpr)]
     (modname-chunk module-name filename)))
 
-(fn macros-from-module [ast modname]
-  (let [filename (compiler.assert (search-module modname)
-                                  (.. "extract-macros: unable to resolve module '"
-                                      modname "'") ast)
-        src (with-open [fin (io.open filename)] (fin:read :*a))
+(fn module-macros [modname filename]
+  (let [src (with-open [fin (io.open filename)] (fin:read :*a))
         c-opts (doto (utils.copy utils.root.options)
                      (tset :scope (compiler.make-scope))
                      (tset :requireAsInclude false)
@@ -1266,27 +1263,29 @@ modules in the compiler environment."
   (compiler.assert (= (length ast) 2) "Expected one module name argument"
                    (or ?real-ast ast)) ; real-ast comes from import-macros
   (let [caller (tostring (. ast 1))
-        modname (resolve-module-name ast scope parent {})
-        ;; prefix extract-macros in macro-loaded to avoid naming collisions
-        ;; between macro modules and macros extracted from normal modules
-        macro-key (if (= caller :extract-macros)
-                      (.. "extract:" modname)
-                      modname)]
+        modname (resolve-module-name ast scope parent {})]
     (compiler.assert (utils.string? modname)
                      "module name must compile to string" (or ?real-ast ast))
     (when (not (. macro-loaded modname))
-      (if (= :extract-macros caller)
-        (tset macro-loaded macro-key (macros-from-module ast modname))
-        (let [(loader filename) (search-macro-module modname)]
-          (compiler.assert loader (.. modname " module not found.") ast)
-          (tset macro-loaded macro-key
-                (compiler.assert (utils.table? (loader modname filename))
-                                 "expected macros to be table" (or ?real-ast ast))))))
+      (let [(loader m-filename) (search-macro-module modname)]
+        (if (= :extract-macros caller)
+            (let [filename (compiler.assert (search-module modname)
+                                            (.. "could not resolve module: " modname)
+                                            ast)]
+              (compiler.assert (or (not loader) (= filename m-filename))
+                               (: "name conflict for '%s' between macro module and module"
+                                  :format modname)
+                               (or ?real-ast ast))
+              (tset macro-loaded modname (module-macros modname filename)))
+          (do (compiler.assert loader (.. modname " module not found.") ast)
+              (tset macro-loaded modname
+                    (compiler.assert (utils.table? (loader modname m-filename))
+                                     "expected macros to be table" (or ?real-ast ast)))))))
     ;; if we're called from import-macros or extract-macros, return the modname;
     ;; else add them to scope directly
     (if (or (= :import-macros caller) (= :extract-macros caller))
-        (. macro-loaded macro-key)
-        (add-macros (. macro-loaded macro-key) ast scope parent))))
+        (. macro-loaded modname)
+        (add-macros (. macro-loaded modname) ast scope parent))))
 
 (doc-special :require-macros [:macro-module-name]
              "Load given module and use its contents as macro definitions in current scope.
