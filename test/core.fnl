@@ -472,6 +472,8 @@
       [])
   (== [(pick-values 4 :a :b :c (values :d :e))]
       ["a" "b" "c" "d"])
+  (== (let [(x y z) (pick-values 2 :X :Y :Z)] [x y z])
+      [:X :Y nil])
   ;; ensure pick-values output respects nval, e.g. in middle of table literal
   (== [:X (pick-values 2 :Y :YY) :Z] [:X :Y :Z])
   (== [:X (pick-values 0 :YY) :Y] [:X nil :Y])

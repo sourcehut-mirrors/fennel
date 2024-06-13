@@ -1482,7 +1482,7 @@ Lua output. The module must be a string literal and resolvable at compile time."
 (doc-special :tail! ["body"]
              "Assert that the body being called is in tail position.")
 
-(fn SPECIALS.pick-values [ast scope parent]
+(fn SPECIALS.pick-values [ast scope parent opts]
   (let [n (. ast 2)
         vals (utils.list (utils.sym :values) (unpack ast 3))]
     (compiler.assert (and (= :number (type n)) (<= 0 n) (= n (math.floor n)))
@@ -1497,9 +1497,14 @@ Lua output. The module must be a string literal and resolvable at compile time."
             (-> (compiler.compile1 (. ast i) scope parent {:nval 0})
                 (compiler.keep-side-effects parent nil ast)))
           [])
-        (let [syms (fcollect [_ 1 n &into (utils.list)]
+        ;; Declare exactly N temp bindings to limit the supplied values. If
+        ;; numeric nval is passed in, we need only generate up to that many
+        ;; syms, because we know the rest will go unused.
+        (let [N (if (and (= :number (type opts.nval)) (< opts.nval n))
+                    opts.nval
+                    n)
+              syms (fcollect [_ 1 N &into (utils.list)]
                      (utils.sym (compiler.gensym scope :pv)))]
-          ;; Declare exactly n temp bindings for supplied values without `let`
           (compiler.destructure syms vals ast scope parent
                                 {:nomulti true :noundef true
                                  :symtype :pv :declaration true})
