@@ -149,7 +149,7 @@ By default, start is 2."
       ;; Compile each operand w/ an nval based on parent nval + position offset
       (let [subexprs (compiler.compile1 (. ast i) scope parent
                                         {:nval (if (not= i len) 1
-                                                   nval (math.max 1 (- nval (- len 2))))})]
+                                                   nval (math.max 0 (- nval (- len 2))))})]
         (table.insert exprs (. subexprs 1))
         (when (= i len)
           (for [j 2 (length subexprs)] (table.insert exprs (. subexprs j))))))
