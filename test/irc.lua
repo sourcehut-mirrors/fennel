@@ -1,3 +1,11 @@
+local view = require('fennel').view
+
+local function warn(...)
+    local cols = {...}
+    for i, c in ipairs(cols) do cols[i] = tostring(c) end
+    io.stderr:write(table.concat(cols, '\t') .. "\n")
+end
+
 local server_port = (os.getenv("IRC_HOST_PORT") or "irc.libera.chat 6667")
 local channel = os.getenv("IRC_CHANNEL")
 local url = os.getenv("JOB_URL") or "???"
@@ -12,7 +20,13 @@ local is_main = branch == 'main'
 -- This may fail in future if libera chat once again blocks builds.sr.ht
 -- from connecting; it currently works after we asked them to look into it
 return function(failure_count)
-    if  (0 ~= tonumber(failure_count)) and is_main and is_origin and channel then
+    local will_send_irc = not not ((0 ~= tonumber(failure_count))
+        and true and is_origin and channel)
+    warn(((will_send_irc and "Sending" or "Not sending") .. " IRC report:\n%s"):format(view{
+        failure_count = failure_count, branch = branch, is_origin = is_origin,
+        channel = channel, url = url, will_send_irc = will_send_irc,
+    }))
+    if will_send_irc then
         print("Announcing failure on", server_port, channel)
 
         local git_log = io.popen("git log --oneline -n 1 HEAD")
