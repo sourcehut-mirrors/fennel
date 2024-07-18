@@ -575,7 +575,8 @@
 (fn test-sym []
   (t.= "return \"f_1_auto.foo:bar\""
                   (fennel.compile-string
-                   "(eval-compiler (string.format \"%q\" (view `f#.foo:bar)))")))
+                   "(eval-compiler (string.format \"%q\" (view `f#.foo:bar)))"))
+  (t.= false true "bork"))
 
 (fn test-stable-kv-output []
   (let [add-keys "(macro add-keys [t ...]
