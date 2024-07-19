@@ -15,6 +15,8 @@ local is_origin = url:sub(1, #origin_job_prefix) == origin_job_prefix
 
 local branch = io.popen("git rev-parse --abbrev-ref HEAD"):read('*a')
                  :gsub('\n$', '')
+local git_ref = os.getenv('GIT_REF')
+local build_submitter = os.getenv('build_submitter')
 local is_main = branch == 'main'
 
 -- This may fail in future if libera chat once again blocks builds.sr.ht
@@ -24,7 +26,8 @@ return function(failure_count)
         and true and is_origin and channel)
     warn(((will_send_irc and "Sending" or "Not sending") .. " IRC report:\n%s"):format(view{
         failure_count = failure_count, branch = branch, is_origin = is_origin,
-        channel = channel, url = url, will_send_irc = will_send_irc,
+        IRC_CHANNEL = channel, JOB_URL = url, will_send_irc = will_send_irc, is_main,
+        GIT_REF = git_ref, BUILD_SUBMITTER = build_submitter,
     }))
     if will_send_irc then
         print("Announcing failure on", server_port, channel)
