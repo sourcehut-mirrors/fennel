@@ -22,6 +22,7 @@ local is_main = branch == 'main'
 -- This may fail in future if libera chat once again blocks builds.sr.ht
 -- from connecting; it currently works after we asked them to look into it
 return function(failure_count)
+    print(failure_count, is_main, is_origin, channel)
     local will_send_irc = not not ((0 ~= tonumber(failure_count))
         and true and is_origin and channel)
     warn(((will_send_irc and "Sending" or "Not sending") .. " IRC report:\n%s"):format(view{
