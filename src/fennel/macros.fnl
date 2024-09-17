@@ -237,7 +237,7 @@ Supports early termination with an &until clause."
           (list (sym :values) (unpack accum-var))
           accum-var))))
 
-(fn accumulate* [iter-tbl body ...]
+(fn accumulate* [_ iter-tbl body ...]
   "Accumulation macro.
 
 It takes a binding table and an expression as its arguments.  In the binding
@@ -393,6 +393,15 @@ REPL `,return` command returns values to assert in place to continue execution."
            (_G.assert (fennel#.repl opts#)))
          (values (unpack# vals# 1 vals#.n)))))
 
+(fn accumulate-find [iter-tbl body]
+  (let [found (gensym :found)
+        x (. iter-tbl (- (length iter-tbl) 1))]
+    (table.insert iter-tbl 1 found)
+    (table.insert iter-tbl 2 (sym :nil))
+    (table.insert iter-tbl (sym :&until))
+    (table.insert iter-tbl found)
+    `(accumulate ,iter-tbl (if ,body ,x))))
+
 {:-> ->*
  :->> ->>*
  :-?> -?>*
@@ -404,7 +413,7 @@ REPL `,return` command returns values to assert in place to continue execution."
  :collect collect*
  :icollect icollect*
  :fcollect fcollect*
- :accumulate accumulate*
+ :accumulate (setmetatable {:find accumulate-find} {:__call accumulate*})
  :faccumulate faccumulate*
  :partial partial*
  :lambda lambda*

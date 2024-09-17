@@ -280,6 +280,10 @@ When given a second string argument, will check that the sym's name matches it."
 
 (fn string? [x] (if (= (type x) :string) x false))
 
+(fn callable? [x]
+  (or (= (type x) :function)
+      (case (getmetatable x) {: __call} (= :function (type __call)))))
+
 (fn multi-sym? [str]
   "Returns a table containing the symbol's segments if passed a multi-sym.
 A multi-sym refers to a table field reference like tbl.x or access.channel:deny.
@@ -428,6 +432,7 @@ handlers will be skipped."
  : call-of?
  : quoted?
  : string?
+ : callable?
  : idempotent-expr?
  : valid-lua-identifier?
  : lua-keyword?

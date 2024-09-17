@@ -65,8 +65,7 @@ will see its values updated as expected, regardless of mangling rules."
   (assert (= :string (type name)) "name must be a string")
   (if (not tgt)
       (.. name " not found")
-      (or (= (type tgt) :function)
-          (case (getmetatable tgt) {: __call} (= :function (type __call))))
+      (utils.callable? tgt)
       (let [elts [name (unpack (or (compiler.metadata:get tgt :fnl/arglist)
                                    ["#<unknown-arguments>"]))]]
         (string.format "(%s)\n  %s" (table.concat elts " ") (v->docstring tgt)))
@@ -1328,7 +1327,7 @@ modules in the compiler environment."
 (fn add-macros [macros* ast scope]
   (compiler.assert (utils.table? macros*) "expected macros to be table" ast)
   (each [k v (pairs macros*)]
-    (compiler.assert (= (type v) :function)
+    (compiler.assert (utils.callable? v)
                      "expected each macro to be function" ast)
     (compiler.check-binding-valid (utils.sym k) scope ast {:macro? true})
     (tset scope.macros k v)))

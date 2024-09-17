@@ -409,7 +409,7 @@ if opts contains the nval option."
     (if (and (not macro*) multi-sym-parts)
         (let [nested-macro (utils.get-in scope.macros multi-sym-parts)]
           (assert-compile (or (not (. scope.macros (. multi-sym-parts 1)))
-                              (= (type nested-macro) :function))
+                              (utils.callable? nested-macro))
                           "macro not found in imported macro module" ast)
           nested-macro)
         macro*)))

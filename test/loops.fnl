@@ -4,7 +4,7 @@
 (macro == [form expected ?opts]
   `(let [(ok# val#) (pcall fennel.eval ,(view form) ,?opts)]
      (t.is ok# val#)
-     (t.= val# ,expected)))
+     (t.= ,expected val#)))
 
 (fn test-each []
   (== (each [x (pairs [])] nil) nil)
@@ -111,7 +111,8 @@
         (+ a b)) 10)
   (== (do (macro twice [expr] `(do ,expr ,expr))
           (twice (accumulate [s "" _ v (ipairs [:a :b])] (.. s v))))
-      :ab))
+      :ab)
+  (== (accumulate.find [_ n (ipairs [9 8 7 6])] (= 0 (math.fmod n 2))) 8))
 
 (fn test-faccumulate []
   (== 15 (faccumulate [sum 0 i 1 5] (+ sum i)))
