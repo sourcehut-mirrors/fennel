@@ -117,6 +117,12 @@
            (M)])
       "import callable table macros to bound macro table"))
 
+(fn test-extract-macros []
+  (== (do (macros.extract m :test.mod.extractable-macros )
+          (m.fmt-greeting :Fenneler)
+          )
+      "Hi, Fenneler!"))
+
 (fn test-macro-path []
   (== (do (import-macros m :test.other-macros) (m.m)) "testing macro path")
   (== (do (import-macros m :test.mod.macroed) (m.reverse3 [1 2 3]))
@@ -929,6 +935,7 @@
  : test-doto
  : test-?.
  : test-import-macros
+ : test-extract-macros
  : test-require-macros
  : test-relative-macros
  : test-relative-chained-mac-mod-mac

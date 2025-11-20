@@ -366,34 +366,10 @@ With a second argument, returns expanded form as a string instead of printing."
 Each binding form can be either a symbol or a k/v destructuring table.
 Example:
   (import-macros mymacros                 :my-macros    ; bind to symbol
-                 {:macro1 alias : macro2} :proj.macros) ; import by name"
-  (assert (and binding1 module-name1 (= 0 (% (select "#" ...) 2)))
-          "expected even number of binding/modulename pairs")
-  (for [i 1 (select "#" binding1 module-name1 ...) 2]
-    ;; delegate the actual loading of the macros to the require-macros
-    ;; special which already knows how to set up the compiler env and stuff.
-    ;; this is weird because require-macros is deprecated but it works.
-    (let [(binding modname) (select i binding1 module-name1 ...)
-          scope (get-scope)
-          ;; if the module-name is an expression (and not just a string) we
-          ;; patch our expression to have the correct source filename so
-          ;; require-macros can pass it down when resolving the module-name.
-          expr `(import-macros ,modname)
-          filename (if (list? modname) (. modname 1 :filename) :unknown)
-          _ (set expr.filename filename)
-          macros* (_SPECIALS.require-macros expr scope {} binding)]
-      (if (sym? binding)
-          ;; bind whole table of macros to table bound to symbol
-          (tset scope.macros (. binding 1) macros*)
-          ;; 1-level table destructuring for importing individual macros
-          (table? binding)
-          (each [macro-name [import-key] (pairs binding)]
-            (assert (utils.callable? (. macros* macro-name))
-                    (.. "macro " macro-name " not found in module "
-                        (tostring modname)
-                        "\n" (view macros*)))
-            (tset scope.macros import-key (. macros* macro-name))))))
-  nil)
+                 {:macro1 alias : macro2} :proj.macros) ; import by name
+NOTE: Deprecated in favor of the special macros.import, which this macro now
+invokes"
+  `(macros.import ,binding1 ,module-name1 ,...))
 
 (fn assert-repl* [condition ...]
   "Enter into a debug REPL  and print the message when condition is false/nil.

@@ -78,7 +78,7 @@
         binding? [:collect :icollect :fcollect :each :for :let :with-open
                   :accumulate :faccumulate]
         define? [:fn :lambda :λ :var :local :macro :macros :global]
-        deprecated ["~=" "#" :global :require-macros :pick-args]
+        deprecated ["~=" "#" :global :require-macros :pick-args :import-macros]
         out {}]
     (each [k v (pairs compiler.scopes.global.specials)]
       (let [metadata (or (. compiler.metadata v) {})]
