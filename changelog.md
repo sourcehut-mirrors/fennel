@@ -12,6 +12,13 @@ deprecated forms.
 
 * Macros (and specials) can now also be implemented as callable tables,
   allowing the introduction of new built-ins without scope conflicts
+* Add new special `macros.import`, with same functionality as legacy `import-macros`
+* Add new special `macros.extract` for importing macros from non-macro/runtime modules
+* Add new special `macros.extern` for exposing local macros to `macros.extract`
+
+### Changes and Removals
+
+* Deprecate `import-macros` in favor of special `macros.import`, which it now invokes
 
 ## 1.6.1 / 2025-12-30
 
