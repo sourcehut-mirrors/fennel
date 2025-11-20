@@ -417,7 +417,12 @@
     (send "(local tbl {})")
     (send "(: (. (require :fennel) :metadata) :set tbl :fnl/docstring \"A TABLE\")")
     (t.= "tbl\n  A TABLE" (send ",doc tbl")
-         ",doc works on tables")))
+         ",doc works on tables")
+    (send "(macros (let [m {:tbl-macro (setmetatable {} {:__call (fn [_ x] x)})}]
+                    (: (. (require :fennel) :metadata) :setall m.tbl-macro :fnl/arglist [:x] :fnl/docstring \"identity macro\")
+                    m))")
+    (t.= "(tbl-macro x)\n  identity macro" (send ",doc tbl-macro")
+         ",doc works on callable table macros")))
 
 (fn test-no-undocumented []
   (let [send (wrap-repl)
