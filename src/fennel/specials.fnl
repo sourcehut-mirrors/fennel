@@ -1505,13 +1505,14 @@ Lua output. The module must be a string literal and resolvable at compile time."
           (each [macro-name import-key (pairs binding)]
             (compiler.assert (and (utils.sym? import-key)
                                   (not (utils.multi-sym? import-key)))
-                             "imported macros can only be destructured with sym keys"
+                             "imported macros can only be destructured one level"
                              binding)
-            (let [import-key (tostring import-key)]
-              (assert (utils.callable? (. macros* macro-name))
-                    (.. "macro " macro-name " not found in module "
-                        (tostring modname)))
-              (tset scope.macros import-key (. macros* macro-name))))))))
+            (compiler.assert (utils.callable? (. macros* macro-name))
+                             (.. "macro " macro-name
+                                 " not found or not callable in module "
+                                 (tostring modname))
+                             import-key)
+            (tset scope.macros (tostring import-key) (. macros* macro-name)))))))
 
 (fn SPECIALS.macros.import [ast scope parent opts]
   (import-or-extract-macros ast scope parent opts load-macros))
@@ -1539,7 +1540,7 @@ Example:
                                                       binding)]
                        (fin:read :*a))
                 _ (compiler.compile-string code opts)]
-            (tset macro-loaded extract-key subscope.exerned-macros)
+            (tset macro-loaded extract-key subscope.externed-macros)
             subscope.externed-macros))))
   (import-or-extract-macros ast scope parent opts get-externed-macros))
 
