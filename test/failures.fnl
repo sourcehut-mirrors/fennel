@@ -88,12 +88,21 @@
     "(let [t {:b 2}] (import-macros t :test.macros) t.b)"
     "tried to reference a macro"
     "(import-macros {: asdf} :test.macros)"
-    "macro asdf not found in module test.macros"
+    "macro asdf not found or not callable in module test.macros"
     "(import-macros m :test.bad.macro-no-return-table)"
     "expected macros to be table"
+    "(let [t {:b 2}] (macros.extract t :test.mod.extractable-macros) t.b)"
+    "tried to reference a macro"
+    "(macros.extract m :test.mod.foo)"
+    "expected module to expose macro table"
+    "(macros.extract {: asdf} :test.mod.extractable-macros)"
+    "macro asdf not found or not callable in module test.mod.extractable-macros"
     "(macros {:noop #nil} {:identity #$})" "Expected one table argument"
     "(macro xyz [t] ,t)" "tried to use unquote outside quote"
-    "(macros (do :BORK))" "Expected one table argument"}))
+    "(macros (do :BORK))" "Expected one table argument"
+    "(macros.extract test :test.file.not.here) (test.asdf)"
+    "could not find module test.file.not.here"
+    }))
 
 (fn test-binding-fails []
   (assert-fail (let [x {:foo (fn [self] self.bar) :bar :baz}] x:foo)
