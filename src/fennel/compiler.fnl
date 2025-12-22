@@ -29,6 +29,7 @@ implement nesting. "
      :depth (if parent (+ (or parent.depth 0) 1) 0)
      :hashfn (and parent parent.hashfn)
      :refedglobals {}
+     :exposed-macros false ; set here for consistency, so we're aware this is in scope
      : parent}))
 
 (fn assert-msg [ast msg]

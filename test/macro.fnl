@@ -117,11 +117,35 @@
            (M)])
       "import callable table macros to bound macro table"))
 
+(fn test-expose-macros []
+  (t.error "top of module scope" #(fennel.eval "(do (macros.expose {:foo #:BORK}))")
+           "macros.expose should be restricted to top of module scope")
+  (let [scope (fennel.scope)]
+    (fennel.eval "(macros.expose {:ok #:OK})" {: scope})
+    (t.= :function (type scope.exposed-macros.ok)
+         "macros.expose should set scope.exposed-macros")
+    (t.error "can only be called once" #(fennel.eval "(macros.expose {:bork #:BORK})" {: scope})
+             "macros.expose should be restricted to one call per module")
+    (t.error "expected macros to be a table" #(fennel.eval "(macros.expose true)")
+             "macros.expose requires macros to be table")))
+
 (fn test-extract-macros []
-  (== (do (macros.extract m :test.mod.extractable-macros )
-          (m.fmt-greeting :Fenneler)
-          )
-      "Hi, Fenneler!"))
+  (== (do (macros.extract {: fmt-greeting} :test.mod.extractable-macros )
+          (fmt-greeting :Fenneler))
+      "Hi, Fenneler!"
+      "macros.extract works on test module's exposed macros")
+  (== (do (macros.extract mm :test.mod.extractable-macros )
+          (mm.child.identity 1))
+      1
+      "macros.extract works on exposed macro sub-tables")
+  (t.= :table (type (. fennel.macro-loaded "@extract:test.mod.extractable-macros"))
+       "macros.extract sets macro table on (.. \"@extract:\" modulename)")
+  (let [scope (fennel.scope)]
+    (fennel.eval "(macros.expose {:ok #:OK})" {: scope :filename "beep/boop.fnl"})
+    (set (. fennel.macro-loaded "@extract:beep.boop") scope.exposed-macros)
+    (== (do (macros.extract {: ok} :beep.boop) (ok))
+        :OK
+        "(. fennel.macro-loaded (.. \"@extract:\" macroname)) can be manipulated externally")))
 
 (fn test-macro-path []
   (== (do (import-macros m :test.other-macros) (m.m)) "testing macro path")
@@ -936,6 +960,7 @@
  : test-?.
  : test-import-macros
  : test-extract-macros
+ : test-expose-macros
  : test-require-macros
  : test-relative-macros
  : test-relative-chained-mac-mod-mac
