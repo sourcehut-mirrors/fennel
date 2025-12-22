@@ -3,6 +3,7 @@
 
 (macro fmt-greeting [name] (.. "Hi, " name "!") )
 
-(macros.extern {:fmt-greeting fmt-greeting})
+(macros.expose {:fmt-greeting fmt-greeting
+                :child {:identity #$}})
 {: greet}
 

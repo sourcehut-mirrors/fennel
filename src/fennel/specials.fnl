@@ -1342,13 +1342,21 @@ modules in the compiler environment."
                           (tset macro-loaded modname (loader modname filename))
                           (. macro-loaded modname)))))
 
-(fn add-macros [macros* ast scope]
+;; checks macro validity and adds it to the tgt (when present)
+;; if scope is non-nil, check for valid binding in the macro name
+(fn add-macro [?tgt binding macro* ast ?scope]
+  (compiler.assert (utils.callable? macro*)
+                   "expected each macro to be function or callable table" ast)
+  (if ?scope (compiler.check-binding-valid (utils.sym binding) ?scope ast {:macro? true}))
+  (if ?tgt (tset ?tgt binding macro*)))
+
+;; Verifies every macro macro in table, copying to tgt when provided.
+;; Otherwise, returns the macro table as-is. When scope is passed, asserts
+;; validity of each macro binding
+(fn add-macros [?tgt macros* ast ?scope]
   (compiler.assert (utils.table? macros*) "expected macros to be table" ast)
-  (each [k v (pairs macros*)]
-    (compiler.assert (utils.callable? v)
-                     "expected each macro to be function or callable table" ast)
-    (compiler.check-binding-valid (utils.sym k) scope ast {:macro? true})
-    (tset scope.macros k v)))
+  (each [k v (pairs macros*)] (add-macro ?tgt k v ast ?scope))
+  (if (= nil ?tgt) macros*))
 
 (fn resolve-module-name [?filename modname-ast opts]
   ;; Compile module path to resolve real module name.  Allows using
@@ -1361,23 +1369,20 @@ modules in the compiler environment."
         modname-chunk (load-code modexpr)]
     (modname-chunk module-name filename)))
 
-(fn load-macros [ast modname ?real-ast]
+(fn load-macros [ast modname]
   (when (not (. macro-loaded modname))
     (let [(loader filename) (search-macro-module modname 1)]
-      (compiler.assert loader (.. modname " module not found.") (or ?real-ast ast))
+      (compiler.assert loader (.. modname " module not found.") ast)
       (tset macro-loaded modname
             (compiler.assert (utils.table? (loader modname filename))
-                             "expected macros to be table" (or ?real-ast ast)))))
+                             "expected macros to be table" ast))))
   (. macro-loaded modname))
 
-(fn SPECIALS.require-macros [ast scope _parent ?real-ast]
-  (compiler.assert (= (length ast) 2) "Expected one module name argument"
-                   (or ?real-ast ast)) ; real-ast comes from import-macros
-  (let [modname (compiler.assert (utils.string? (resolve-module-name ast.filename (. ast 2) {: scope}))
-                                 "module name must compile to string"
-                                 (or ?real-ast ast))
-        macros* (load-macros ast modname)]
-    (add-macros macros* ast scope)))
+(fn SPECIALS.require-macros [ast scope _parent]
+  (compiler.assert (= (length ast) 2) "Expected one module name argument" ast)
+  (let [modname (resolve-module-name ast.filename (. ast 2) {: scope})]
+    (compiler.assert (utils.string? modname) "module name must compile to string" ast)
+    (add-macros scope.macros (load-macros ast modname) ast scope)))
 
 (doc-special :require-macros [:macro-module-name]
              "Load given module and use its contents as macro definitions in current scope.
@@ -1479,7 +1484,7 @@ Lua output. The module must be a string literal and resolvable at compile time."
   (compiler.assert (= (length ast) 2) "Expected one table argument" ast)
   (let [macro-tbl (eval-compiler* (. ast 2) scope parent)]
     (compiler.assert (utils.table? macro-tbl) "Expected one table argument" ast)
-    (add-macros macro-tbl ast scope)))
+    (add-macros scope.macros macro-tbl ast scope)))
 
 (set SPECIALS.macros (setmetatable {:macros macros*}
                                    {:__call (fn [_ ...] (macros* ...))}))
@@ -1493,7 +1498,7 @@ Lua output. The module must be a string literal and resolvable at compile time."
                    "expected even number of binding/modulename pairs")
   (for [i 2 (length ast) 2]
     (let [(binding modname) (unpack ast i (+ i 1))
-          modname (-> (resolve-module-name ast.filename modname scope opts)
+          modname (-> (resolve-module-name ast.filename modname opts)
                       (utils.string?)
                       (compiler.assert "modname must be a string" binding))
           macros* (get-macros binding modname)]
@@ -1508,11 +1513,11 @@ Lua output. The module must be a string literal and resolvable at compile time."
                              "imported macros can only be destructured one level"
                              binding)
             (compiler.assert (utils.callable? (. macros* macro-name))
-                             (.. "macro " macro-name
-                                 " not found or not callable in module "
+                             (.. "macro " macro-name " not found or not callable in module "
                                  (tostring modname))
                              import-key)
-            (tset scope.macros (tostring import-key) (. macros* macro-name)))))))
+            (add-macro scope.macros (tostring import-key)
+                       (. macros* macro-name) import-key scope))))))
 
 (fn SPECIALS.macros.import [ast scope parent opts]
   (import-or-extract-macros ast scope parent opts load-macros))
@@ -1525,31 +1530,30 @@ Example:
                  {:macro1 alias : macro2} :proj.macros) ; import by name")
 
 (fn SPECIALS.macros.extract [ast scope parent opts]
-  (fn get-externed-macros [binding modname]
+  (fn get-exposed-macros [binding modname]
     (let [opts (doto (utils.copy opts) (tset :scope scope))
-          modname (resolve-module-name ast.filename modname opts)
-          extract-key (.. "@extract:" modname)
-          cached (. macro-loaded extract-key)
-          path (and (not cached) (search-module modname))]
-      (set opts.filename path)
-      (if cached cached
-          (let [subscope (compiler.make-scope)
-                _ (set opts.scope subscope)
-                code (with-open [fin (compiler.assert (io.open path)
-                                                      "could not open module for macro extraction"
-                                                      binding)]
-                       (fin:read :*a))
-                _ (compiler.compile-string code opts)]
-            (tset macro-loaded extract-key subscope.externed-macros)
-            subscope.externed-macros))))
-  (import-or-extract-macros ast scope parent opts get-externed-macros))
+          modname (resolve-module-name (or ast.filename opts.filename) modname opts)
+          extract-key (.. "@extract:" modname)]
+      (when (not (. macro-loaded extract-key))
+        (tset macro-loaded extract-key
+              (let [path (compiler.assert (search-module modname)
+                                          (.. "could not find module " modname)
+                                          binding)
+                    subscope (compiler.make-scope)
+                    _ (set (opts.scope opts.filename) (values subscope path))
+                    code (with-open [fin (assert (io.open path))]
+                           (fin:read :*a))
+                    _ (compiler.compile-string code opts)]
+                (compiler.assert (utils.table? subscope.exposed-macros)
+                                 "expected module to expose macro table"
+                                 binding))))
+      (. macro-loaded extract-key)))
+  (import-or-extract-macros ast scope parent opts get-exposed-macros))
 
 (doc-special :macros.extract ["binding1 modname1 ..."]
-             "Behaves like macros.import, for macros externed from runtime modules.
-extern. Behaves like macros.import, but imports macros from runtime (non-macro)
-modules. In order to extract a macro, it first must be externed from the target
-module. See also macros.extern.
-
+             "Like macros.import, but targets runtime (non-macro) modules.
+In order to extract a macro, it first must be made available for extraction
+from the target module using macros.expose. See ,doc macros.expose\n
 Example:
   (macros.extract {: five} :some.runtime.module)
   (five))
@@ -1557,27 +1561,28 @@ Example:
   (macros.extract mod :some.runtime.module)
   (mod.six)")
 
-(fn SPECIALS.macros.extern [ast scope parent]
-  (compiler.assert (= (length ast) 2) "macros.extern accepts only 1 argument" ast)
-  (compiler.assert (= nil scope.parent.parent)
-                   "macros.extern must be run from top of module scope" ast)
+(fn SPECIALS.macros.expose [ast scope parent]
+  (compiler.assert (not scope.exposed-macros) "macros.expose can only be called once per module")
+  (compiler.assert (= nil scope.parent.parent) "macros.expose must be run from top of module scope" ast)
+  (compiler.assert (= (length ast) 2) "macros.expose accepts only 1 argument" ast)
+
   (let [{: list : sym :sequence seq} utils
         mac-bind (collect [k (pairs scope.macros)] k (sym k))
         macro-let (list (sym :let) (seq mac-bind (sym :_SCOPE.macros)) (. ast 2))
-        externed-macros (eval-compiler* macro-let scope parent)]
-    (compiler.assert (and (utils.table?  externed-macros) )
-                     "externed macros must be a table" (or (. ast 2) ast))
-    (set scope.externed-macros externed-macros)
+        exposed-macros (eval-compiler* macro-let scope parent)]
+    (compiler.assert (utils.table?  exposed-macros)
+                     "expected macros to be a table" (or (. ast 2) ast))
+    (set scope.exposed-macros exposed-macros)
     nil))
 
-(doc-special :macros.extern
+(doc-special :macros.expose
              ["{:macro-name-1 macro-on-scope-or-expr-1 macro-name-2 macro-def2 ...}"]
              "Expose module-level macros to importing via macros.extract.
-For how to use externed macros, see macros.extract documentation.\n
+For using exposed macros, see ,doc macros.extract\n
 Example:
   (fn some-runtime-fn [] :do-something) ;; runtime code is compiled but unused
   (macro five [] 5)
-  (macros.extern {: five            ; target existing macro on the current scope
+  (macros.expose {: five            ; target existing macro on the current scope
                   :six (fn [] 6)})  ; declare a new macro, like in (macros))")
 
 (fn SPECIALS.tail! [ast scope parent opts]

@@ -367,8 +367,7 @@ Each binding form can be either a symbol or a k/v destructuring table.
 Example:
   (import-macros mymacros                 :my-macros    ; bind to symbol
                  {:macro1 alias : macro2} :proj.macros) ; import by name
-NOTE: Deprecated in favor of the special macros.import, which this macro now
-invokes"
+NOTE: Deprecated in favor of macros.import, which this macro now invokes"
   `(macros.import ,binding1 ,module-name1 ,...))
 
 (fn assert-repl* [condition ...]
