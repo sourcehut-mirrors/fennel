@@ -102,6 +102,13 @@
       (accumulate [t tbl _ k (ipairs path) :until (= nil t)]
         (if (= (type t) :table) (. t k)))))
 
+(fn concat [...]
+  "Concatenate all sequential tables"
+  (faccumulate [out [] i 1 (select :# ...)]
+    (icollect [_ v (ipairs (or (pick-values 1 (select i ...)) []))
+               &into out]
+      v)))
+
 (fn copy [?from ?to]
   "Returns a shallow copy of its table argument. Returns an empty table on nil."
   (collect [k v (pairs (or ?from [])) :into (or ?to {})]
@@ -293,6 +300,11 @@ When given a second string argument, will check that the sym's name matches it."
   (and (or (= :function (type x)) (case (getmetatable x) {: __call} __call))
        x))
 
+(fn call-or-use [value ...]
+  "If value is callable, invoke it with any additional args passed. Otherwise,
+returns all arguments as-is"
+  (if (callable? value) (value ...) (values value ...)))
+
 (fn multi-sym? [str]
   "Returns a table containing the symbol's segments if passed a multi-sym.
 A multi-sym refers to a table field reference like tbl.x or access.channel:deny.
@@ -417,6 +429,7 @@ handlers will be skipped."
 {: warn
  : allpairs
  : stablepairs
+ : call-or-use
  : copy
  : get-in
  : walk-tree

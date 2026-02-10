@@ -147,6 +147,13 @@
         :OK
         "(. fennel.macro-loaded (.. \"@extract:\" macroname)) can be manipulated externally")))
 
+(fn test-import-as-extract []
+  (== (do (macros.import {: fmt-greeting} :test.mod.extractable-macros )
+          (fmt-greeting :Fenneler))
+      "Hi, Fenneler!"
+      "macros.extract works on test module's exposed macros")
+  )
+
 (fn test-macro-path []
   (== (do (import-macros m :test.other-macros) (m.m)) "testing macro path")
   (== (do (import-macros m :test.mod.macroed) (m.reverse3 [1 2 3]))
@@ -967,6 +974,7 @@
  : test-relative-filename
  : test-eval-compiler
  : test-inline-macros
+ : test-import-as-extract
  : test-macrodebug
  : test-macro-path
  : test-match
