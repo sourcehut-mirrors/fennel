@@ -1273,15 +1273,11 @@ Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
         (utils.unpack res 2 res.n)
         (error (. res 2)))))
 
-(local dofile-with-searcher
-  #(using-searcher-override utils.fennel-module.dofile $...))
-(local compile-string-with-searcher
-  #(using-searcher-override compiler.compile-string $...))
-
-
 (fn make-searcher [?opts]
   "This will allow regular `require` to work with Fennel:
-table.insert(package.loaders or package.searchers, fennel.searcher)"
+table.insert(package.loaders or package.searchers, fennel.searcher). If ?opts
+is a function, it will be invoked with a copyh of root options as an argument
+to dynamically resolve options"
   (fn [module-name]
     (let [{: on-module-found : on-module-not-found &as opts}
           (if (utils.callable? ?opts)
@@ -1299,72 +1295,76 @@ table.insert(package.loaders or package.searchers, fennel.searcher)"
                         (on-module-not-found error module-name)
                         error)))))
 
+(fn macro-searcher-opts-init [root-opts]
+  (doto (utils.copy {:env :_COMPILER
+                     :on-module-not-found #(values nil $...)
+                     :path #utils.fennel-module.macro-path
+                     :requireAsInclude false}
+                    (utils.copy root-opts))
+        (tset :allowedGlobals nil)))
+
+;; legacy fennel module searcher
 (local fennel-macro-searcher
   (do
     (var searcher nil)
-    (set searcher (make-searcher
-                    (fn [root-opts]
-                      (let [opts (utils.copy {:path #utils.fennel-module.macro-path
-                                              :on-module-not-found #(values nil $...)
-                                              :env :_COMPILER
-                                              :requireAsInclude false}
-                                             (utils.copy root-opts))]
-                        (set opts.allowedGlobals nil)
-                        (if (= opts.compiler-env _G)
-                            (fn opts.on-module-found [filename opts]
-                              (values (partial dofile-with-searcher searcher filename opts)
-                                      filename)))
-                        opts))))
+    (set searcher
+         (make-searcher
+           #(let [opts (macro-searcher-opts-init $)]
+             (if (= opts.compiler-env _G)
+                 (fn opts.on-module-found [filename opts]
+                   (values (partial using-searcher-override utils.fennel-module.dofile
+                                    searcher filename opts)
+                           filename)))
+             opts)))
     searcher))
 
+;; macros.import searcher, reads fennel modules for (macros.export) calls
 (local extract-macro-searcher
   (do
     (var searcher nil)
-    (set searcher (make-searcher
-                    (fn [root-opts]
-                      (let [opts (utils.copy {:path #utils.fennel-module.path
-                                              :on-module-not-found #(values nil $...)
-                                              :env :_COMPILER
-                                              :requireAsInclude false}
-                                             (utils.copy root-opts))]
-                        (set opts.allowedGlobals nil)
-                        (fn opts.on-module-found [filename opts]
-                          (let [opts (doto (utils.copy opts)
-                                           (tset :filename filename))
-                                code (with-open [fin (assert (io.open filename))]
-                                       (fin:read :*a))
-                                compile-string (if (= opts.compiler-env _G)
-                                                   compile-string-with-searcher
-                                                   compiler.compile-string)]
-                            (values (fn [modname filename]
-                                      (local subscope (compiler.make-scope))
-                                      (doto opts
-                                            (tset :scope subscope)
-                                            (tset :filename (compiler.assert filename "filename!"))
-                                            (tset :modname (compiler.assert modname "modname!")))
-                                      (compile-string code opts)
-                                      (assert (utils.table? subscope.exposed-macros)
-                                              "expected module to expose macro table")
-                                      subscope.exposed-macros)
-                                    filename
-                                    opts))
-                          )
-                        opts))))
+    (set searcher
+         (make-searcher
+           #(let [opts (macro-searcher-opts-init $)]
+              (fn opts.on-module-found [filename opts]
+                (let [opts (doto (utils.copy opts) (tset :filename filename))
+                      code (with-open [fin (assert (io.open filename))]
+                             (fin:read :*a))
+                      compile-string (if (= opts.compiler-env _G)
+                                         (partial using-searcher-override
+                                                  compiler.compile-string)
+                                         compiler.compile-string)]
+                  (values (fn [modulename ...]
+                            (let [subscope (compiler.make-scope)]
+                              (set (opts.scope opts.modulename)
+                                   (values subscope modulename))
+                              (compile-string code opts)
+                              (assert (utils.table? subscope.exported-macros)
+                                      "expected module to export macro table")
+                              subscope.exported-macros))
+                          filename)))
+              opts)))
     searcher))
+
 (fn lua-macro-searcher [module-name]
   (case (search-module module-name package.path)
     filename (let [code (with-open [f (io.open filename)] (assert (f:read :*a)))
                    chunk (load-code code (make-compiler-env) filename)]
                (values chunk filename))))
+;; TODO: Work out best way to expose and document these so as not to confuse the user
+;; TODO: Decide the fate of lua-macro-searcher. Stay on macro-searchers only?
+;; Stay on both?
+(local macro-searchers [fennel-macro-searcher lua-macro-searcher])
+(local macro-extract-searchers [extract-macro-searcher lua-macro-searcher])
 
-(local macro-searchers [fennel-macro-searcher extract-macro-searcher lua-macro-searcher])
+;; higher order function for search-macro-module
+(fn try-searchers [searchers modname]
+  (accumulate [(found file) (values nil (.. modname "not found"))
+               _ f (ipairs searchers) &until found]
+    (case (f modname)
+      (loader ?filename) (values loader ?filename))))
 
-(fn search-macro-module [modname n]
-  (case (. macro-searchers n)
-    f (case (f modname)
-        (loader ?filename) (values loader ?filename)
-        _ (search-macro-module modname (+ n 1)))
-    _ (values nil (.. modname " module not found"))))
+(local search-macro-module (partial try-searchers macro-searchers))
+(local search-macro (partial try-searchers macro-extract-searchers))
 
 (fn sandbox-fennel-module [modname]
   "Let limited Fennel module thru with safe fields."
@@ -1383,7 +1383,7 @@ It ensures that compile-scoped modules are loaded differently from regular
 modules in the compiler environment."
                     (or (. macro-loaded modname) (sandbox-fennel-module modname)
                         (let [(loader filename)
-                              (compiler.assert (search-macro-module modname 1))]
+                              (compiler.assert (search-macro-module modname))]
                           (tset macro-loaded modname (loader modname filename))
                           (. macro-loaded modname)))))
 
@@ -1407,46 +1407,30 @@ modules in the compiler environment."
   ;; Compile module path to resolve real module name.  Allows using
   ;; (.. ... :.foo.bar) expressions and self-contained
   ;; statement-expressions in `require`, `include`, `require-macros`,
-  ;; `macros.import`, and `macros.extract`.
+  ;; `macros.import`, and `import-macros`.
   (let [filename (or ?filename (and (utils.table? modname-ast) modname-ast.filename))
         module-name utils.root.options.module-name
         modexpr (compiler.compile modname-ast opts)
         modname-chunk (load-code modexpr)]
     (modname-chunk module-name filename)))
 
-(fn load-exposed-macros [ast scope opts binding modname]
-    (let [opts (doto (utils.copy opts) (tset :scope scope))
-          modname (resolve-module-name (or ast.filename opts.filename) modname opts)
-          extract-key (.. "@extract:" modname)]
-      (when (not (. macro-loaded extract-key))
-        (tset macro-loaded extract-key
-              (let [path (compiler.assert (search-module modname)
-                                          (.. "could not find module " modname)
-                                          binding)
-                    subscope (compiler.make-scope)
-                    _ (set (opts.scope opts.filename) (values subscope path))
-                    code (with-open [fin (assert (io.open path))]
-                           (fin:read :*a))
-                    _ (compiler.compile-string code opts)]
-                (compiler.assert (utils.table? subscope.exposed-macros)
-                                 "expected module to expose macro table"
-                                 binding))))
-      (. macro-loaded extract-key)))
-
-(fn load-macros [ast modname]
+(fn create-macro-finder [search-macro-module ast modname]
   (when (not (. macro-loaded modname))
-    (let [(loader filename) (search-macro-module modname 1)]
-      (compiler.assert loader (.. modname " module not found.") ast)
+    (let [(loader filename) (search-macro-module modname)]
+      (compiler.assert loader (.. "could not find module " modname) ast)
       (tset macro-loaded modname
             (compiler.assert (utils.table? (loader modname filename))
                              "expected macros to be table" ast))))
   (. macro-loaded modname))
 
+(local find-macros (partial create-macro-finder search-macro-module))
+(local find-macros-module (partial create-macro-finder search-macro))
+
 (fn SPECIALS.require-macros [ast scope _parent]
   (compiler.assert (= (length ast) 2) "Expected one module name argument" ast)
   (let [modname (resolve-module-name ast.filename (. ast 2) {: scope})]
     (compiler.assert (utils.string? modname) "module name must compile to string" ast)
-    (add-macros scope.macros (load-macros ast modname) ast scope)))
+    (add-macros scope.macros (find-macros ast modname) ast scope)))
 
 (doc-special :require-macros [:macro-module-name]
              "Load given module and use its contents as macro definitions in current scope.
@@ -1583,52 +1567,46 @@ Lua output. The module must be a string literal and resolvable at compile time."
             (add-macro scope.macros (tostring import-key)
                        (. macros* macro-name) import-key scope))))))
 
+(fn SPECIALS.macros.import-macro-module [ast scope parent opts]
+  (import-or-extract-macros ast scope parent opts find-macros))
+
 (fn SPECIALS.macros.import [ast scope parent opts]
-  (import-or-extract-macros ast scope parent opts load-macros))
+  (import-or-extract-macros ast scope parent opts find-macros-module))
 
-(doc-special :macros.import ["binding1 module-name1 ..."]
-             "Bind a table of macros from each macro module according to a binding form.
-Each binding form can be either a symbol or a k/v destructuring table.
-Example:
-  (macros.import mymacros                 :my-macros    ; bind to symbol
-                 {:macro1 alias : macro2} :proj.macros) ; import by name")
-
-(fn SPECIALS.macros.extract [ast scope parent opts]
-  (import-or-extract-macros ast scope parent opts (partial load-exposed-macros ast scope opts)))
-
-(doc-special :macros.extract ["binding1 modname1 ..."]
-             "Like macros.import, but targets runtime (non-macro) modules.
+(doc-special :macros.import ["binding1 modname1 ..."]
+             "Like import-macros, but targets runtime (non-macro) modules.
 In order to extract a macro, it first must be made available for extraction
-from the target module using macros.expose. See ,doc macros.expose\n
+from the target module using macros.export. See ,doc macros.export\n
 Example:
-  (macros.extract {: five} :some.runtime.module)
+  (macros.import {: five} :some.runtime.module)
   (five))
   ;; alternatively:
-  (macros.extract mod :some.runtime.module)
+  (macros.import mod :some.runtime.module)
   (mod.six)")
 
-(fn SPECIALS.macros.expose [ast scope parent]
-  (compiler.assert (not scope.exposed-macros) "macros.expose can only be called once per module")
-  (compiler.assert (= nil scope.parent.parent) "macros.expose must be run from top of module scope" ast)
-  (compiler.assert (= (length ast) 2) "macros.expose accepts only 1 argument" ast)
+(fn SPECIALS.macros.export [ast scope parent]
+  (compiler.assert (not scope.exported-macros) "macros.export can only be called once per module")
+  (compiler.assert (< scope.depth 2) (.. "macros.export must be run from top of module scope: depth="
+                                         (tostring scope.depth)) ast)
+  (compiler.assert (= (length ast) 2) "macros.export accepts only 1 argument" ast)
 
   (let [{: list : sym :sequence seq} utils
         mac-bind (collect [k (pairs scope.macros)] k (sym k))
         macro-let (list (sym :let) (seq mac-bind (sym :_SCOPE.macros)) (. ast 2))
-        exposed-macros (eval-compiler* macro-let scope parent)]
-    (compiler.assert (utils.table?  exposed-macros)
+        exported-macros (eval-compiler* macro-let scope parent)]
+    (compiler.assert (utils.table?  exported-macros)
                      "expected macros to be a table" (or (. ast 2) ast))
-    (set scope.exposed-macros exposed-macros)
+    (set scope.exported-macros exported-macros)
     nil))
 
-(doc-special :macros.expose
+(doc-special :macros.export
              ["{:macro-name-1 macro-on-scope-or-expr-1 macro-name-2 macro-def2 ...}"]
-             "Expose module-level macros to importing via macros.extract.
-For using exposed macros, see ,doc macros.extract\n
+             "Expose module-level macros to importing via macros.import.
+For using exported macros, see ,doc macros.import\n
 Example:
   (fn some-runtime-fn [] :do-something) ;; runtime code is compiled but unused
   (macro five [] 5)
-  (macros.expose {: five            ; target existing macro on the current scope
+  (macros.export {: five            ; target existing macro on the current scope
                   :six (fn [] 6)})  ; declare a new macro, like in (macros))")
 
 (fn SPECIALS.tail! [ast scope parent opts]
@@ -1695,6 +1673,7 @@ expands to
  : load-code
  : macro-loaded
  : macro-searchers
+ : macro-extract-searchers
  : make-compiler-env
  : search-module
  : make-searcher

@@ -102,13 +102,6 @@
       (accumulate [t tbl _ k (ipairs path) :until (= nil t)]
         (if (= (type t) :table) (. t k)))))
 
-(fn concat [...]
-  "Concatenate all sequential tables"
-  (faccumulate [out [] i 1 (select :# ...)]
-    (icollect [_ v (ipairs (or (pick-values 1 (select i ...)) []))
-               &into out]
-      v)))
-
 (fn copy [?from ?to]
   "Returns a shallow copy of its table argument. Returns an empty table on nil."
   (collect [k v (pairs (or ?from [])) :into (or ?to {})]

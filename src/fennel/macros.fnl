@@ -368,7 +368,7 @@ Example:
   (import-macros mymacros                 :my-macros    ; bind to symbol
                  {:macro1 alias : macro2} :proj.macros) ; import by name
 NOTE: Deprecated in favor of macros.import, which this macro now invokes"
-  `(macros.import ,binding1 ,module-name1 ,...))
+  `(macros.import-macro-module ,binding1 ,module-name1 ,...))
 
 (fn assert-repl* [condition ...]
   "Enter into a debug REPL  and print the message when condition is false/nil.
