@@ -97,9 +97,8 @@
     "expected module to export macro table"
     "(macros.import {: asdf} :test.mod.extractable-macros)"
     "macro asdf not found or not callable in module test.mod.extractable-macros"
-    "(macros {:noop #nil} {:identity #$})" "Expected one table argument"
     "(macro xyz [t] ,t)" "tried to use unquote outside quote"
-    "(macros (do :BORK))" "Expected one table argument"
+    "(macros (do :BORK))" "expr must return a table"
     "(macros.import test :test.file.not.here) (test.asdf)"
     "could not find module test.file.not.here"
     }))

@@ -1528,10 +1528,15 @@ Lua output. The module must be a string literal and resolvable at compile time."
     ((assert (load-code (compiler.compile ast opts) (wrap-env env)))
      opts.module-name ast.filename)))
 
+(fn bind-scope-macros [scope parent ast]
+  (let [{: list : sequence : sym} utils
+        binding (collect [k (pairs scope.macros)] k (sym k)) ]
+    (-> (list (sym :let) (sequence binding (sym :_SCOPE.macros)) (unpack ast 2))
+        (eval-compiler* scope parent))))
+
 (fn macros* [ast scope parent]
-  (compiler.assert (= (length ast) 2) "Expected one table argument" ast)
-  (let [macro-tbl (eval-compiler* (. ast 2) scope parent)]
-    (compiler.assert (utils.table? macro-tbl) "Expected one table argument" ast)
+  (let [macro-tbl (utils.table? (bind-scope-macros scope parent ast))]
+    (compiler.assert macro-tbl "(macros ...) expr must return a table" ast)
     (add-macros scope.macros macro-tbl ast scope)))
 
 (set SPECIALS.macros (setmetatable {:macros macros*}
@@ -1588,15 +1593,9 @@ Example:
   (compiler.assert (not scope.exported-macros) "macros.export can only be called once per module")
   (compiler.assert (< scope.depth 2) (.. "macros.export must be run from top of module scope: depth="
                                          (tostring scope.depth)) ast)
-  (compiler.assert (= (length ast) 2) "macros.export accepts only 1 argument" ast)
-
-  (let [{: list : sym :sequence seq} utils
-        mac-bind (collect [k (pairs scope.macros)] k (sym k))
-        macro-let (list (sym :let) (seq mac-bind (sym :_SCOPE.macros)) (. ast 2))
-        exported-macros (eval-compiler* macro-let scope parent)]
-    (compiler.assert (utils.table?  exported-macros)
-                     "expected macros to be a table" (or (. ast 2) ast))
-    (set scope.exported-macros exported-macros)
+  (let [macro-tbl (utils.table? (bind-scope-macros scope parent ast)) ]
+    (compiler.assert macro-tbl "(macros.export ...) expr must return a table" ast)
+    (set scope.exported-macros macro-tbl)
     nil))
 
 (doc-special :macros.export

@@ -126,8 +126,14 @@
          "macros.export should set scope.exported-macros")
     (t.error "can only be called once" #(fennel.eval "(macros.export {:bork #:BORK})" {: scope})
              "macros.export should be restricted to one call per module")
-    (t.error "expected macros to be a table" #(fennel.eval "(macros.export true)")
-             "macros.export requires macros to be table")))
+    (t.error "expr must return a table" #(fennel.eval "(macros.export true)")
+             "macros.export requires macros to be table"))
+  (let [scope (fennel.scope)]
+    (fennel.eval "(macros.export (local res #:OK) {:ok? res})" {: scope})
+    (set fennel.macro-loaded.check-export-implicit-do scope.exported-macros)
+    (== (do (macros.import {: ok?} :check-export-implicit-do) (ok?))
+        :OK
+        "macros.export uses an implicit do" )))
 
 (fn test-macros-dot-import []
   (== (do (macros.import {: fmt-greeting} :test.mod.extractable-macros )
@@ -191,7 +197,9 @@
   (== (do (macro n [] 1) (local x (n)) (macro n [] 2) (values x (n)))
       (values 1 2) "macro-macro shadowing should be allowed")
   (== (do (macros (let [noop #nil] {: noop})) (noop))
-      nil "(macros) should accept an expr that returns a table"))
+      nil "(macros) should accept an expr that returns a table")
+  (== (do (macros (local yes #true) {: yes}) (yes))
+      true "(macros) uses an implicit do"))
 
 (fn test-macrodebug []
   (let [eval-normalize #(-> (pick-values 1 (fennel.eval $1 $2))
@@ -953,8 +961,10 @@
 (fn test-macro-names []
   (t.error "multisym" #(fennel.eval "(macro case.str [m] m)")))
 
-{:teardown #(each [k (pairs fennel.repl)]
-              (tset fennel.repl k nil))
+{:teardown #(do (each [k (pairs fennel.repl)]
+                  (tset fennel.repl k nil))
+                (each [k (pairs fennel.macro-loaded)]
+                  (tset fennel.macro-loaded k nil)))
  : test-arrows
  : test-doto
  : test-?.
