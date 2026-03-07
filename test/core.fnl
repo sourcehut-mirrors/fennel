@@ -552,6 +552,9 @@
       [3 :x])
   (== (let [pack (or table.pack #(doto [$...] (tset :n (select :# ...))))]
         (pack (pick-values 5 :x (do :y) (do :z))))
+      {1 :x 2 :y 3 :z :n 5})
+  (== (let [pack (or table.pack #(doto [$...] (tset :n (select :# ...))))]
+        (pack (values.pick 5 :x (do :y) (do :z))))
       {1 :x 2 :y 3 :z :n 5}))
 
 (fn test-with-open []

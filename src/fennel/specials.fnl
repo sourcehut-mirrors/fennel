@@ -81,6 +81,16 @@ will see its values updated as expected, regardless of mangling rules."
   (tset compiler.metadata (. SPECIALS name)
         {:fnl/arglist arglist :fnl/docstring docstring :fnl/body-form? ?body-form?}))
 
+
+;; Standardize callaable table specials using a shared metatable. This will
+;; both give us a standard predictable format to use *and* a tiny (maybe
+;; negligible)  perf benefit to sharing a metatable
+(local callable-table-special-mt
+  {:__call (fn [self ...] "__call metamethod invoking (self.--call ...)" (self.--call ...))})
+
+(fn ->callable-table [f ?methods]
+  (setmetatable (utils.copy ?methods {:--call f}) callable-table-special-mt))
+
 (fn compile-do [ast scope parent ?start]
   "Compile a list of forms for side effects."
   (let [start (or ?start 2)
@@ -151,19 +161,52 @@ By default, start is 2."
       (set i 2))
     (values (. ast i) (= nil (. ast (+ i 1))))))
 
-(fn SPECIALS.values [ast scope parent]
-  (let [exprs []]
-    (each [subast last? (iter-args ast)]
-      (let [subexprs (compiler.compile1 subast scope parent
-                                        {:nval (and (not last?) 1)})]
-        (table.insert exprs (. subexprs 1))
-        (when last?
-          (for [j 2 (length subexprs)]
-            (table.insert exprs (. subexprs j))))))
-    exprs))
-
+(set SPECIALS.values
+     (->callable-table
+       (fn [ast scope parent]
+         (let [exprs []]
+           (each [subast last? (iter-args ast)]
+             (let [subexprs (compiler.compile1 subast scope parent
+                                               {:nval (and (not last?) 1)})]
+               (table.insert exprs (. subexprs 1))
+               (when last?
+                 (for [j 2 (length subexprs)]
+                   (table.insert exprs (. subexprs j))))))
+           exprs))))
 (doc-special :values ["..."]
              "Return multiple values from a function. Must be in tail position.")
+
+(fn SPECIALS.values.pick [ast scope parent]
+  (let [n (. ast 2)
+        vals (utils.list (utils.sym :values) (unpack ast 3))]
+    (compiler.assert (and (= :number (type n)) (<= 0 n) (= n (math.floor n)))
+                     (.. "Expected n to be an integer >= 0, got " (tostring n)))
+    (if (= 1 n)
+        ;; n = 1 can be simplified to (<expr>) in lua output
+        (let [[[expr]] (compiler.compile1 vals scope parent {:nval 1})]
+          [(.. "(" expr ")")])
+        (= 0 n)
+        (do
+          (for [i 3 (length ast)]
+            (-> (compiler.compile1 (. ast i) scope parent {:nval 0})
+                (compiler.keep-side-effects parent nil (. ast i))))
+          [])
+        (let [syms (fcollect [_ 1 n &into (utils.list)]
+                     (utils.sym (compiler.gensym scope :pv)))]
+          ;; Declare exactly n temp bindings for supplied values without `let`
+          (compiler.destructure syms vals ast scope parent
+                                {:nomulti true :noundef true
+                                 :symtype :pv :declaration true})
+          syms))))
+;; also alias it to values.pick
+(set SPECIALS.pick-values SPECIALS.values.pick)
+
+(doc-special :pick-values ["n" "..."]
+             "Evaluate to exactly n values.\n\nFor example,
+  (values.pick 2 ...)\nor the equivalent\n  (pick-values 2 ...)
+expands to
+  (let [(_0_ _1_) ...]
+    (values _0_ _1_))")
 
 (fn ->stack [stack tbl]
   ;; append all keys and values of the table to the stack
@@ -1487,36 +1530,6 @@ Lua output. The module must be a string literal and resolvable at compile time."
 
 (doc-special :tail! ["body"]
              "Assert that the body being called is in tail position.")
-
-(fn SPECIALS.pick-values [ast scope parent]
-  (let [n (. ast 2)
-        vals (utils.list (utils.sym :values) (unpack ast 3))]
-    (compiler.assert (and (= :number (type n)) (<= 0 n) (= n (math.floor n)))
-                     (.. "Expected n to be an integer >= 0, got " (tostring n)))
-    (if (= 1 n)
-        ;; n = 1 can be simplified to (<expr>) in lua output
-        (let [[[expr]] (compiler.compile1 vals scope parent {:nval 1})]
-          [(.. "(" expr ")")])
-        (= 0 n)
-        (do
-          (for [i 3 (length ast)]
-            (-> (compiler.compile1 (. ast i) scope parent {:nval 0})
-                (compiler.keep-side-effects parent nil (. ast i))))
-          [])
-        (let [syms (fcollect [_ 1 n &into (utils.list)]
-                     (utils.sym (compiler.gensym scope :pv)))]
-          ;; Declare exactly n temp bindings for supplied values without `let`
-          (compiler.destructure syms vals ast scope parent
-                                {:nomulti true :noundef true
-                                 :symtype :pv :declaration true})
-          syms))))
-
-(doc-special :pick-values ["n" "..."]
-             "Evaluate to exactly n values.\n\nFor example,
-  (pick-values 2 ...)
-expands to
-  (let [(_0_ _1_) ...]
-    (values _0_ _1_))")
 
 (fn SPECIALS.eval-compiler [ast scope parent]
   (let [old-first (. ast 1)]
