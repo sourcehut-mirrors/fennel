@@ -597,10 +597,25 @@
 (fn test-comment []
   (t.= "--[[ hello world ]]\nreturn nil"
                   (fennel.compile-string "(comment hello world)"))
-  (t.= "--[[ \"hello\nworld\" ]]\nreturn nil"
+  (t.= "--[[ hello\nworld ]]\nreturn nil"
                   (fennel.compile-string "(comment \"hello\nworld\")"))
-  (t.= "--[[ \"hello]\\]lol\" ]]\nreturn nil"
+  (t.= "--[[ hello]\\]lol ]]\nreturn nil"
                   (fennel.compile-string "(comment \"hello]]lol\")")))
+
+(fn test-comment-dot-block []
+  (t.= "--[[\nhello\nworld\n--]]\nreturn nil"
+       (fennel.compile-string "(comment.block hello world)")
+       "each input goes on its own line")
+  (t.= "--[[\nhello\nworld\n--]]\nreturn nil"
+       (fennel.compile-string "(comment.block hello :world)")
+       "strings and syms are both raw output, no automatic quotes")
+  (t.= (.. "--[[\n"
+           (string.gsub (fennel.view [:one :two :three :four :five :six :seven :eight
+                                      :nine :ten :eleven :twelve :thirteen :fourteen])
+                        "\"" "")
+           "\n--]]\nreturn nil")
+       (fennel.compile-string "(comment.block [one two three four five six seven eight nine ten eleven twelve thirteen fourteen])")
+       "tables can expand to multi-line"))
 
 (fn test-nest []
   (let [env (collect [k v (pairs _G) &into {: fennel}] k v)
@@ -643,6 +658,7 @@
  : test-with-open
  : test-method-calls
  : test-comment
+ : test-comment-dot-block
  : test-nest
  : test-sym
  : test-stable-kv-output

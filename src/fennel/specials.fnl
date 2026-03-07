@@ -78,7 +78,8 @@ will see its values updated as expected, regardless of mangling rules."
   (each [i a (ipairs arglist)]
     (when (= :table (type a))
       (tset arglist i (.. "[" (table.concat a " ") "]"))))
-  (tset compiler.metadata (. SPECIALS name)
+  (tset compiler.metadata (or (. SPECIALS name)
+                              (-?>> (utils.multi-sym? name) (utils.get-in SPECIALS)))
         {:fnl/arglist arglist :fnl/docstring docstring :fnl/body-form? ?body-form?}))
 
 
@@ -850,14 +851,26 @@ Evaluates body once for each value between start and stop (inclusive)." true)
 Method name doesn't have to be known at compile-time; if it is, use
 (tbl:method-name ...) instead.")
 
-(fn SPECIALS.comment [ast _ parent]
-  (let [c (-> (icollect [i elt (ipairs ast)]
-                (if (not= i 1) (view elt {:one-line? true})))
-              (table.concat " ")
-              (: :gsub "%]%]" "]\\]"))]
-    (compiler.emit parent (.. "--[[ " c " ]]") ast)))
+(λ commenter [{: sep : ?view-opts : ?after-open : ?before-close : ?line-prefix : ?line-suffix}]
+  (fn [ast _ parent]
+    (let [c (-> (icollect [i elt (ipairs ast)]
+                  (if (not= i 1) (.. (or ?line-prefix "")
+                                     (if (= :table (type elt))
+                                         (view elt (or ?view-opts {:one-line? true}))
+                                         (tostring elt))
+                                     (or ?line-suffix ""))))
+                (table.concat sep))]
+      (compiler.emit parent (.. "--[[" (or ?after-open " ")
+                                (c:gsub "%]%]" "]\\]")
+                                (or ?before-close " ") "]]")
+                     ast))))
 
+(set SPECIALS.comment (->callable-table (commenter {:sep " "})))
 (doc-special :comment ["..."] "Comment which will be emitted in Lua output." true)
+
+(set SPECIALS.comment.block
+     (commenter {:sep "\n" :?after-open "\n" :?before-close "\n--" :?view-opts {}}))
+(doc-special :comment.block ["..."] "Convert all arguments to strings and join them with \\n.")
 
 (fn hashfn-max-used [f-scope i max]
   (let [max (if (. f-scope.symmeta (.. "$" i) :used) i max)]
