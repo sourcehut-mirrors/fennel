@@ -936,6 +936,12 @@
   (t.= {1 :a 3 :c 5 :e :n 5} (macro-wrap pack (pack :a nil :c nil :e))
        "pack is in compiler-env"))
 
+(fn test-compiler-env []
+  (== (do (macro module-name [] _MODULENAME) (module-name))
+      :a-module
+      "macro env sets _MODULENAME from opts.module-name"
+      {:module-name :a-module}))
+
 (fn test-extra-compiler-env []
   (== (do (macro m []
             (if _G.lol
@@ -994,6 +1000,7 @@
  : test-lambda-nested-checks
  : test-literal
  : test-env-lua-helpers
+ : test-compiler-env
  : test-extra-compiler-env
  : test-macro-names
  : test-sym}

@@ -1183,6 +1183,7 @@ Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
              :_CHUNK ?parent
              :_IS_COMPILER true
              :_SCOPE ?scope
+             :_MODULENAME (or (?. ?opts :module-name) (?. utils.root.options :module-name))
              :_SPECIALS compiler.scopes.global.specials
              :_VARARG (utils.varg) ; don't use this!
              : macro-loaded
@@ -1318,32 +1319,33 @@ to dynamically resolve options"
              opts)))
     searcher))
 
+(fn get-macro-exports [compile filename opts ...]
+  ;; retrieve macros exported from a fennel runtime module.
+  ;; the compile argument is meant for overriding the normal compile function
+  ;; (for use by fennel-macro-extract-searcher); otherwise, it can be partially
+  ;; applied with fennel.compile-string
+  (let [code (with-open [fin (assert (io.open filename))] (fin:read :*a))
+        subscope (compiler.make-scope)
+        opts (utils.copy opts)]
+    (set opts.scope subscope)
+    (if (not opts.filename) (set opts.filename filename))
+    (compile code opts)
+    (assert (utils.table? subscope.exported-macros)
+            "expected module to export macro table")
+    subscope.exported-macros))
+
 ;; macros.import searcher, reads fennel modules for (macros.export) calls
-(local extract-macro-searcher
-  (do
-    (var searcher nil)
-    (set searcher
-         (make-searcher
-           #(let [opts (macro-searcher-opts-init $)]
-              (fn opts.on-module-found [filename opts]
-                (let [opts (doto (utils.copy opts) (tset :filename filename))
-                      code (with-open [fin (assert (io.open filename))]
-                             (fin:read :*a))
-                      compile-string (if (= opts.compiler-env _G)
-                                         (partial using-searcher-override
-                                                  compiler.compile-string)
-                                         compiler.compile-string)]
-                  (values (fn [modulename ...]
-                            (let [subscope (compiler.make-scope)]
-                              (set (opts.scope opts.modulename)
-                                   (values subscope modulename))
-                              (compile-string code opts)
-                              (assert (utils.table? subscope.exported-macros)
-                                      "expected module to export macro table")
-                              subscope.exported-macros))
-                          filename)))
-              opts)))
-    searcher))
+(local fennel-macro-extract-searcher
+  (make-searcher
+    (fn [root-opts] (let [opts (macro-searcher-opts-init root-opts)]
+       (fn opts.on-module-found [filename opts]
+         (let [opts (doto (utils.copy opts) (tset :filename filename))
+               compile (if (= _G opts.compiler-env)
+                           (partial using-searcher-override
+                                    compiler.compile-string fennel-macro-searcher)
+                           compiler.compile-string)]
+           (values #(get-macro-exports compile filename opts $...) filename)))
+       opts))))
 
 (fn lua-macro-searcher [module-name]
   (case (search-module module-name package.path)
@@ -1354,7 +1356,7 @@ to dynamically resolve options"
 ;; TODO: Decide the fate of lua-macro-searcher. Stay on macro-searchers only?
 ;; Stay on both?
 (local macro-searchers [fennel-macro-searcher lua-macro-searcher])
-(local macro-extract-searchers [extract-macro-searcher lua-macro-searcher])
+(local macro-extract-searchers [fennel-macro-extract-searcher])
 
 ;; higher order function for search-macro-module
 (fn try-searchers [searchers modname]
@@ -1424,7 +1426,7 @@ modules in the compiler environment."
   (. macro-loaded modname))
 
 (local find-macros (partial create-macro-finder search-macro-module))
-(local find-macros-module (partial create-macro-finder search-macro))
+(local find-macro-export (partial create-macro-finder search-macro))
 
 (fn SPECIALS.require-macros [ast scope _parent]
   (compiler.assert (= (length ast) 2) "Expected one module name argument" ast)
@@ -1576,7 +1578,7 @@ Lua output. The module must be a string literal and resolvable at compile time."
   (import-or-extract-macros ast scope parent opts find-macros))
 
 (fn SPECIALS.macros.import [ast scope parent opts]
-  (import-or-extract-macros ast scope parent opts find-macros-module))
+  (import-or-extract-macros ast scope parent opts find-macro-export))
 
 (doc-special :macros.import ["binding1 modname1 ..."]
              "Like import-macros, but targets runtime (non-macro) modules.
@@ -1677,4 +1679,5 @@ expands to
  : search-module
  : make-searcher
  : get-function-metadata
+ :get-macro-exports (partial get-macro-exports compiler.compile-string)
  : wrap-env}
