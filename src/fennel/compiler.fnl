@@ -9,29 +9,6 @@
 
 (local scopes {:global nil :compiler nil :macro nil})
 
-(fn make-scope [?parent]
-  "Create a new Scope, optionally under a parent scope.
-Scopes are compile time constructs that are responsible for keeping track of
-local variables, name mangling, and macros.  They are accessible to user code
-via the 'eval-compiler' special form (may change). They use metatables to
-implement nesting. "
-  (let [parent (or ?parent scopes.global)]
-    {:includes (setmetatable [] {:__index (and parent parent.includes)})
-     :macros (setmetatable [] {:__index (and parent parent.macros)})
-     :manglings (setmetatable [] {:__index (and parent parent.manglings)})
-     :specials (setmetatable [] {:__index (and parent parent.specials)})
-     :symmeta (setmetatable [] {:__index (and parent parent.symmeta)})
-     :gensym-base (setmetatable [] {:__index (and parent parent.gensym-base)})
-     :unmanglings (setmetatable [] {:__index (and parent parent.unmanglings)})
-     :gensyms (setmetatable [] {:__index (and parent parent.gensyms)})
-     :autogensyms (setmetatable [] {:__index (and parent parent.autogensyms)})
-     :vararg (and parent parent.vararg)
-     :depth (if parent (+ (or parent.depth 0) 1) 0)
-     :hashfn (and parent parent.hashfn)
-     :refedglobals {}
-     :exposed-macros false ; set here for consistency, so we're aware this is in scope
-     : parent}))
-
 (fn assert-msg [ast msg]
   (let [ast-tbl (if (= :table (type ast)) ast {})
         m (getmetatable ast)
@@ -60,6 +37,29 @@ The ast arg should be unmodified so that its first element is the form called."
             (error (assert-msg ast msg) 0)
             (friend.assert-compile condition msg ast source {: error-pinpoint})))))
   condition)
+
+(fn make-scope [?parent]
+  "Create a new Scope, optionally under a parent scope.
+Scopes are compile time constructs that are responsible for keeping track of
+local variables, name mangling, and macros.  They are accessible to user code
+via the 'eval-compiler' special form (may change). They use metatables to
+implement nesting. "
+  (let [parent (or ?parent scopes.global)]
+    {:includes (setmetatable [] {:__index (and parent parent.includes)})
+     :macros (setmetatable [] {:__index (and parent parent.macros)})
+     :manglings (setmetatable [] {:__index (and parent parent.manglings)})
+     :specials (setmetatable [] {:__index (and parent parent.specials)})
+     :symmeta (setmetatable [] {:__index (and parent parent.symmeta)})
+     :gensym-base (setmetatable [] {:__index (and parent parent.gensym-base)})
+     :unmanglings (setmetatable [] {:__index (and parent parent.unmanglings)})
+     :gensyms (setmetatable [] {:__index (and parent parent.gensyms)})
+     :autogensyms (setmetatable [] {:__index (and parent parent.autogensyms)})
+     :vararg (and parent parent.vararg)
+     :depth (if parent (+ (or parent.depth 0) 1) 0)
+     :hashfn (and parent parent.hashfn)
+     :refedglobals {}
+     :exposed-macros false ; set here for consistency, so we're aware this is in scope
+     : parent}))
 
 (set scopes.global (make-scope))
 (set scopes.global.vararg true)

@@ -130,6 +130,8 @@
             :doc specials.doc
             :metadata compiler.metadata
             :traceback compiler.traceback
+            ;; TODO: decide whether to add this to the fennel API
+            ; :get-macro-exports specials.get-macro-exports
             :getinfo compiler.getinfo
             :version utils.version
             :runtime-version utils.runtime-version

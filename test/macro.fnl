@@ -117,6 +117,43 @@
            (M)])
       "import callable table macros to bound macro table"))
 
+(fn test-get-macro-exports []
+  (macro extract [ast ?opts ...]
+    `(let [opts# (collect [k# v# (pairs (or ,?opts {}))
+                           &into {:scope (fennel.scope)}]
+                   k# v#)]
+       ,(if (and (list? ast) (sym? (. ast 1) :values))
+            `(fennel.get-macro-exports
+               ,(table.concat (fcollect [i 2 (length ast)]
+                                (view (. ast i)))
+                              "\n")
+               opts# ,...)
+            `(fennel.get-macro-exports ,(view ast) opts# ,...))))
+  (let [(exported lua-code) (extract (values (macros {:greet #:hi})
+                                             (macros.export {: greet})
+                                             (print (greet))))]
+    (t.= :function (type exported.greet)
+         "Can extract macros directly from string")
+    (t.= lua-code "return print(\"hi\")"
+         "Also returns compiled lua code (since it's compiling anyway"))
+  (let [{: sym : list : sequence} fennel
+        ast-values #(list (sym :values $...))
+        fake-module-ast (list (sym :values)
+                              (list (sym :macros)
+                                    {:yell-modulename
+                                     (list (sym :fn) (sequence)
+                                           (list (sym :string.upper) (sym :_G._MODULENAME)))})
+                              (list (sym :macros.export) {:yell-modulename (sym :yell-modulename)})
+                              (list (sym :yell-modulename)))
+        (ast-exported lua-code) (fennel.get-macro-exports
+                                  fake-module-ast {:module-name :hi.hello
+                                                   :filename :hello.fnl
+                                                   :compile fennel.compile})]
+    (t.= :function (type ast-exported.yell-modulename)
+         "get-macro-exports allows compiling an AST directly by overriding :compile")
+    (t.= "return nil, nil, \"HI.HELLO\"" lua-code
+         "macros now have access to _G._MODULENAME in the compiler-env")))
+
 (fn test-export-macros []
   (t.error "top of module scope" #(fennel.eval "(do (macros.export {:foo #:BORK}))")
            "macros.export should be restricted to top of module scope")
@@ -976,6 +1013,8 @@
  : test-?.
  : test-import-macros
  : test-macros-dot-import
+ ;; TODO: Enable this test if we choose to expose get-macro-exports on the API
+ ; : test-get-macro-exports
  : test-export-macros
  : test-require-macros
  : test-relative-macros

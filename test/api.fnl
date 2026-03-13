@@ -9,6 +9,8 @@
   :doc             "function"
   :dofile          "function"
   :eval            "function"
+  ;; TODO: enable or delete this depending on whether we want to add it to the api
+  ; :get-macro-exports "function"
   :getinfo         "function"
   :install         "function"
   :list            "function"

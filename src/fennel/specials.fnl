@@ -1146,8 +1146,26 @@ Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
           (.. "unsafe file name: " filename))
   (io.open filename ?mode))
 
-;; Circularity
+;; Used by the searcher for macros.import, but also available in the compiler
+;; env so  that macros can extract the exports from runtime Fennel modules.
+;; This is teh equivalent of using `require` from the macro env to import
+;; macro-only modules.
+(fn get-macro-exports [string-or-ast ?opts ...]
+  "Extract `macros.export`s from a runtime Fennel file.
+Returns (values macros-table compiled-lua). In addition to standard compiler
+opts, an optional `:compile` key can be passed to wrap/customize compilation
+behavior; otherwise, it defaults to fennel.compile-string."
+  (let [subscope (compiler.make-scope)
+        {: compile &as opts} (utils.copy ?opts)
+        _ (set (opts.compile opts.scope) (values nil subscope))
+        lua-code ((or compile compiler.compile-string) string-or-ast opts)]
+    (assert (utils.table? subscope.exported-macros)
+            "expected module to export macro table")
+    (values subscope.exported-macros lua-code)))
+
+;; Circularity - this will be set later with set-forcibly!
 (var safe-require nil)
+(var load-macro-exports nil)
 
 (fn safe-compiler-env []
   {:table (utils.copy table)
@@ -1210,6 +1228,7 @@ Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
                                            "must call from macro" ?ast)
                           (. compiler.scopes.macro.manglings
                              (tostring symbol)))
+             :require-macro-exports load-macro-exports
              :macroexpand (fn [form]
                             (compiler.assert compiler.scopes.macro
                                              "must call from macro" ?ast)
@@ -1276,13 +1295,13 @@ Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
 
 (fn make-searcher [?opts]
   "This will allow regular `require` to work with Fennel:
-table.insert(package.loaders or package.searchers, fennel.searcher). If ?opts
-is a function, it will be invoked with a copyh of root options as an argument
-to dynamically resolve options"
+table.insert(package.loaders or package.searchers, fennel.searcher).
+When ?opts is a function, it will be invoked as (?opts root-options module-name)
+and its result used as options for advanced customization."
   (fn [module-name]
     (let [{: on-module-found : on-module-not-found &as opts}
           (if (utils.callable? ?opts)
-              (utils.copy (?opts (or utils.root.options {}) module-name))
+              (utils.copy (?opts (utils.copy utils.root.options) module-name))
               (utils.copy (or ?opts {}) (utils.copy utils.root.options)))]
       (set opts.module-name module-name)
       (set (opts.on-module-found opts.on-module-not-found) nil)
@@ -1291,7 +1310,6 @@ to dynamically resolve options"
                      (on-module-found filename opts)
                      (values (partial utils.fennel-module.dofile filename opts)
                              filename))
-
         (nil error) (if on-module-not-found
                         (on-module-not-found error module-name)
                         error)))))
@@ -1305,59 +1323,38 @@ to dynamically resolve options"
         (tset :allowedGlobals nil)))
 
 ;; legacy fennel module searcher
-(local fennel-macro-searcher
-  (do
-    (var searcher nil)
-    (set searcher
-         (make-searcher
-           #(let [opts (macro-searcher-opts-init $)]
-             (if (= opts.compiler-env _G)
-                 (fn opts.on-module-found [filename opts]
-                   (values (partial using-searcher-override utils.fennel-module.dofile
-                                    searcher filename opts)
-                           filename)))
-             opts)))
-    searcher))
-
-(fn get-macro-exports [compile filename opts ...]
-  ;; retrieve macros exported from a fennel runtime module.
-  ;; the compile argument is meant for overriding the normal compile function
-  ;; (for use by fennel-macro-extract-searcher); otherwise, it can be partially
-  ;; applied with fennel.compile-string
-  (let [code (with-open [fin (assert (io.open filename))] (fin:read :*a))
-        subscope (compiler.make-scope)
-        opts (utils.copy opts)]
-    (set opts.scope subscope)
-    (if (not opts.filename) (set opts.filename filename))
-    (compile code opts)
-    (assert (utils.table? subscope.exported-macros)
-            "expected module to export macro table")
-    subscope.exported-macros))
+(local fennel-macro-searcher nil)
+(set-forcibly! fennel-macro-searcher
+               (make-searcher
+                 #(let [opts (macro-searcher-opts-init $)]
+                    (if (= opts.compiler-env _G)
+                        (fn opts.on-module-found [filename opts]
+                          (values (partial using-searcher-override utils.fennel-module.dofile
+                                           fennel-macro-searcher filename opts)
+                                  filename)))
+                    opts)))
 
 ;; macros.import searcher, reads fennel modules for (macros.export) calls
 (local fennel-macro-extract-searcher
   (make-searcher
-    (fn [root-opts] (let [opts (macro-searcher-opts-init root-opts)]
+    #(let [opts (macro-searcher-opts-init $)]
        (fn opts.on-module-found [filename opts]
-         (let [opts (doto (utils.copy opts) (tset :filename filename))
-               compile (if (= _G opts.compiler-env)
-                           (partial using-searcher-override
-                                    compiler.compile-string fennel-macro-searcher)
-                           compiler.compile-string)]
-           (values #(get-macro-exports compile filename opts $...) filename)))
-       opts))))
+         (let [code (with-open [fin (assert (io.open filename))] (fin:read :*a))
+               opts (doto (utils.copy opts) (tset :filename filename))]
+           (if (= _G opts.compiler-env)
+               (set opts.compile
+                    (partial using-searcher-override
+                             compiler.compile-string fennel-macro-searcher)))
+           (values (partial get-macro-exports code opts) filename)))
+       opts)))
 
 (fn lua-macro-searcher [module-name]
   (case (search-module module-name package.path)
     filename (let [code (with-open [f (io.open filename)] (assert (f:read :*a)))
                    chunk (load-code code (make-compiler-env) filename)]
                (values chunk filename))))
-;; TODO: Work out best way to expose and document these so as not to confuse the user
-;; TODO: Decide the fate of lua-macro-searcher. Stay on macro-searchers only?
-;; Stay on both?
-(local macro-searchers [fennel-macro-searcher lua-macro-searcher])
-(local macro-extract-searchers [fennel-macro-extract-searcher])
 
+;; TODO: Work out best way to expose and document these so as not to confuse the user
 ;; higher order function for search-macro-module
 (fn try-searchers [searchers modname]
   (accumulate [(found file) (values nil (.. modname "not found"))
@@ -1365,8 +1362,22 @@ to dynamically resolve options"
     (case (f modname)
       (loader ?filename) (values loader ?filename))))
 
+(local macro-searchers [fennel-macro-searcher lua-macro-searcher])
+(local macro-export-searchers [fennel-macro-extract-searcher])
 (local search-macro-module (partial try-searchers macro-searchers))
-(local search-macro (partial try-searchers macro-extract-searchers))
+(local search-macro-exports (partial try-searchers macro-export-searchers))
+
+(fn macro-loader [search-macro modname]
+  (if (not (. macro-loaded modname))
+      (let [(loader filename) (search-macro modname)]
+        (compiler.assert loader (.. "could not find module " modname))
+        (tset macro-loaded modname
+              (compiler.assert (utils.table? (loader modname filename))
+                               "expected macros to be table"))))
+  (. macro-loaded modname))
+
+(local load-macro-module (partial macro-loader search-macro-module))
+(set load-macro-exports (partial macro-loader search-macro-exports))
 
 (fn sandbox-fennel-module [modname]
   "Let limited Fennel module thru with safe fields."
@@ -1384,10 +1395,7 @@ to dynamically resolve options"
 It ensures that compile-scoped modules are loaded differently from regular
 modules in the compiler environment."
                     (or (. macro-loaded modname) (sandbox-fennel-module modname)
-                        (let [(loader filename)
-                              (compiler.assert (search-macro-module modname))]
-                          (tset macro-loaded modname (loader modname filename))
-                          (. macro-loaded modname)))))
+                        (load-macro-module modname))))
 
 ;; checks macro validity and adds it to the tgt (when present)
 ;; if scope is non-nil, check for valid binding in the macro name
@@ -1416,23 +1424,11 @@ modules in the compiler environment."
         modname-chunk (load-code modexpr)]
     (modname-chunk module-name filename)))
 
-(fn create-macro-finder [search-macro-module ast modname]
-  (when (not (. macro-loaded modname))
-    (let [(loader filename) (search-macro-module modname)]
-      (compiler.assert loader (.. "could not find module " modname) ast)
-      (tset macro-loaded modname
-            (compiler.assert (utils.table? (loader modname filename))
-                             "expected macros to be table" ast))))
-  (. macro-loaded modname))
-
-(local find-macros (partial create-macro-finder search-macro-module))
-(local find-macro-export (partial create-macro-finder search-macro))
-
 (fn SPECIALS.require-macros [ast scope _parent]
   (compiler.assert (= (length ast) 2) "Expected one module name argument" ast)
   (let [modname (resolve-module-name ast.filename (. ast 2) {: scope})]
     (compiler.assert (utils.string? modname) "module name must compile to string" ast)
-    (add-macros scope.macros (find-macros ast modname) ast scope)))
+    (add-macros scope.macros (load-macro-module modname) ast scope)))
 
 (doc-special :require-macros [:macro-module-name]
              "Load given module and use its contents as macro definitions in current scope.
@@ -1530,14 +1526,14 @@ Lua output. The module must be a string literal and resolvable at compile time."
     ((assert (load-code (compiler.compile ast opts) (wrap-env env)))
      opts.module-name ast.filename)))
 
-(fn bind-scope-macros [scope parent ast]
+(fn compile-macros [scope parent ast]
   (let [{: list : sequence : sym} utils
         binding (collect [k (pairs scope.macros)] k (sym k)) ]
     (-> (list (sym :let) (sequence binding (sym :_SCOPE.macros)) (unpack ast 2))
         (eval-compiler* scope parent))))
 
 (fn macros* [ast scope parent]
-  (let [macro-tbl (utils.table? (bind-scope-macros scope parent ast))]
+  (let [macro-tbl (utils.table? (compile-macros scope parent ast))]
     (compiler.assert macro-tbl "(macros ...) expr must return a table" ast)
     (add-macros scope.macros macro-tbl ast scope)))
 
@@ -1556,7 +1552,7 @@ Lua output. The module must be a string literal and resolvable at compile time."
           modname (-> (resolve-module-name ast.filename modname opts)
                       (utils.string?)
                       (compiler.assert "modname must be a string" binding))
-          macros* (get-macros binding modname)]
+          macros* (get-macros modname)]
       (if (utils.sym? binding)
           ;; bind whole table of macros to table bound to symbol
           (tset scope.macros (. binding 1) macros*)
@@ -1575,10 +1571,10 @@ Lua output. The module must be a string literal and resolvable at compile time."
                        (. macros* macro-name) import-key scope))))))
 
 (fn SPECIALS.macros.import-macro-module [ast scope parent opts]
-  (import-or-extract-macros ast scope parent opts find-macros))
+  (import-or-extract-macros ast scope parent opts load-macro-module))
 
 (fn SPECIALS.macros.import [ast scope parent opts]
-  (import-or-extract-macros ast scope parent opts find-macro-export))
+  (import-or-extract-macros ast scope parent opts load-macro-exports))
 
 (doc-special :macros.import ["binding1 modname1 ..."]
              "Like import-macros, but targets runtime (non-macro) modules.
@@ -1595,7 +1591,7 @@ Example:
   (compiler.assert (not scope.exported-macros) "macros.export can only be called once per module")
   (compiler.assert (< scope.depth 2) (.. "macros.export must be run from top of module scope: depth="
                                          (tostring scope.depth)) ast)
-  (let [macro-tbl (utils.table? (bind-scope-macros scope parent ast)) ]
+  (let [macro-tbl (utils.table? (compile-macros scope parent ast)) ]
     (compiler.assert macro-tbl "(macros.export ...) expr must return a table" ast)
     (set scope.exported-macros macro-tbl)
     nil))
@@ -1674,10 +1670,10 @@ expands to
  : load-code
  : macro-loaded
  : macro-searchers
- : macro-extract-searchers
+ : macro-export-searchers
  : make-compiler-env
  : search-module
  : make-searcher
  : get-function-metadata
- :get-macro-exports (partial get-macro-exports compiler.compile-string)
+ : get-macro-exports
  : wrap-env}
