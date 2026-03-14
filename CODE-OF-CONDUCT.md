@@ -26,6 +26,7 @@ Examples of behavior that contributes to creating a positive environment include
   * Gracefully accepting constructive feedback.
   * Focusing on what is best for the community.
   * Showing empathy and kindness towards other community members.
+  * Respecting the time and effort of others.
 
 Examples of unacceptable behavior by participants include:
 
@@ -37,6 +38,9 @@ Examples of unacceptable behavior by participants include:
   * Publishing others' private information, such as a physical or electronic address, without explicit permission. This includes any sort of "outing" of any aspect of someone's identity without their consent.
   * Publishing screenshots or quotes without all quoted users' *explicit* consent.
   * Publishing of non-harassing private communication.
+  * Answering a good-faith question with an LLM-generated response. ("I asked Claude, and it said ...")
+  * Submitting LLM-generated patches or issues.
+  * Posting any LLM-generated content in any forum that is not clearly marked as such.
   * Any of the above even when [presented as "ironic" or "joking"](https://en.wikipedia.org/wiki/Hipster_racism).
   * Any attempt to present "reverse-ism" versions of the above as violations. Examples of reverse-isms are "reverse racism", "reverse sexism", "heterophobia", and "cisphobia".
   * Unsolicited explanations under the assumption that someone doesn't already know it. Ask before you teach! Don't assume what people's knowledge gaps are.
