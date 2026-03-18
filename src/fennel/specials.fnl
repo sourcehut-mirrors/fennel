@@ -1255,18 +1255,17 @@ behavior; otherwise, it defaults to fennel.compile-string."
   (let [pathsepesc (escapepat pkg-config.pathsep)
         pattern (: "([^%s]*)%s" :format pathsepesc pathsepesc)
         no-dot-module (modulename:gsub "%." pkg-config.dirsep)
-        pathstring (utils.call-or-use ?path modulename utils.root.options)
+        ;; Allows dynamic path lookup on tables other than Fennel module
+        pathstring (if (utils.callable? ?path) (?path modulename) ?path)
         fullpath (.. (or pathstring utils.fennel-module.path) pkg-config.pathsep)]
     (fn try-path [path]
       (let [filename (path:gsub (escapepat pkg-config.pathmark) no-dot-module)]
         (case (io.open filename)
-          file (do
-                 (file:close)
-                 filename)
+          file (do (file:close) filename)
           _ (values nil (.. "no file '" filename "'")))))
 
     (fn find-in-path [start ?tried-paths]
-      (case (fullpath:match pattern start)
+      (case (string.match fullpath pattern start)
         path (case (try-path path)
                filename filename
                (nil error) (find-in-path (+ start (length path) 1)
@@ -1354,7 +1353,6 @@ and its result used as options for advanced customization."
                    chunk (load-code code (make-compiler-env) filename)]
                (values chunk filename))))
 
-;; TODO: Work out best way to expose and document these so as not to confuse the user
 ;; higher order function for search-macro-module
 (fn try-searchers [searchers modname]
   (accumulate [(found file) (values nil (.. modname "not found"))
@@ -1362,6 +1360,7 @@ and its result used as options for advanced customization."
     (case (f modname)
       (loader ?filename) (values loader ?filename))))
 
+;; TODO: Work out best way to expose and document these so as not to confuse the user
 (local macro-searchers [fennel-macro-searcher lua-macro-searcher])
 (local macro-export-searchers [fennel-macro-extract-searcher])
 (local search-macro-module (partial try-searchers macro-searchers))

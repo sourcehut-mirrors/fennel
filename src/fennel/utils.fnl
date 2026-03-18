@@ -293,11 +293,6 @@ When given a second string argument, will check that the sym's name matches it."
   (and (or (= :function (type x)) (case (getmetatable x) {: __call} __call))
        x))
 
-(fn call-or-use [value ...]
-  "If value is callable, invoke it with any additional args passed. Otherwise,
-returns all arguments as-is"
-  (if (callable? value) (value ...) (values value ...)))
-
 (fn multi-sym? [str]
   "Returns a table containing the symbol's segments if passed a multi-sym.
 A multi-sym refers to a table field reference like tbl.x or access.channel:deny.
@@ -422,7 +417,6 @@ handlers will be skipped."
 {: warn
  : allpairs
  : stablepairs
- : call-or-use
  : copy
  : get-in
  : walk-tree
