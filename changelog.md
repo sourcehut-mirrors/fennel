@@ -12,9 +12,11 @@ deprecated forms.
 
 * Macros (and specials) can now also be implemented as callable tables,
   allowing the introduction of new built-ins without scope conflicts
-* Add new special `macros.import`, with same functionality as legacy `import-macros`
-* Add new special `macros.extract` for importing macros from non-macro/runtime modules
-* Add new special `macros.expose` for exposing local macros to `macros.extract`
+* Add new special `macros.import` for importing macros from non-macro/runtime modules
+* Add new special `macros.export` for exposing local macros to `macros.import`
+* Add new special `macros.import-module`, with same functionality as legacy `import-macros`
+* Add `_MODULENAME` to compiler env so exported macros can point back to their
+  own runtime modules, e.g. `\`((require ,_MODULENAME) ,...)
 
 ### Changes and Removals
 

@@ -362,12 +362,13 @@ With a second argument, returns expanded form as a string instead of printing."
     `(,handle ,(view (macroexpand form) {:detect-cycles? false}))))
 
 (fn import-macros* [binding1 module-name1 ...]
-  "Bind a table of macros from each macro module according to a binding form.
+  "NOTE: Deprecated in Fennel 1.7.0. See `macros.import` and `macros.import-module`
+Bind a table of macros from each macro module according to a binding form.
 Each binding form can be either a symbol or a k/v destructuring table.
 Example:
   (import-macros mymacros                 :my-macros    ; bind to symbol
                  {:macro1 alias : macro2} :proj.macros) ; import by name
-NOTE: Deprecated in favor of macros.import, which this macro now invokes"
+"
   `(macros.import-macro-module ,binding1 ,module-name1 ,...))
 
 (fn assert-repl* [condition ...]

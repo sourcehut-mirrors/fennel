@@ -1507,9 +1507,52 @@ macros into nested scopes as well. Note that macros are a
 compile-time construct; they do not exist at runtime. As such macros
 cannot be exported at the bottom of a module like functions and other values.
 
-### `import-macros` load macros from a separate module
+#### `macros.export` - making inline macros available to other modules
+
+Originally, inline macros defined in a runtime fennel module could only live in
+that module, and the only way to load them externally was via dedicated
+macros-only modules. This is still available by way of
+[macros.import-module](#macros.import-module-load-macros-from-a-separate-module)
+(see next ) or the deprecated legacy
+[import-macros](#import-macros-load-macros-from-a-separate-module), but what if
+you want to write a single-file library with both macros and runtime functions,
+or even pair them with library functions?
+
+Any macros defined on the top-level module scope can be exposed for important in
+the following way:
+
+```fennel
+
+(macro rev-vals [...]
+  "A silly arbitrary example"
+  (fcollect [i (select :# ...) 1 -1 &into `(values)]
+    (pick-values 1 (select i ...)] v)))
+;; repl>> ,compile (macrodebug (- (rev-vals 5 4 3))) ;; => 3 - 4 - 5
+
+(macros.export {: rev-rev-vals})
+```
+
+### `macros.import` extract macros exported from a standard Fennel module
+
+Originally, inline macros defined in a runtime fennel module could only live in
+that module, and the only way to load them externally was via dedicated
+macros-only modules. This is still available by way of
+[macros.import-module](#macros.import-module-load-macros-from-a-separate-module)
+(see next ) or the deprecated legacy
+[import-macros](#import-macros-load-macros-from-a-separate-module), but what if
+you want to write a single-file library with both macros and runtime functions,
+or even pair them with library functions?
+
+
+####
+
+### `macros.import-module` load macros from a dedicated macros module
 
 Loads a module at compile-time and binds its functions as local macros.
+
+NOTE: This behaves identically to the now-deprecated `import-macros`, except
+it's a special form namespaced under `macros.*`. In fact, `import-macros` is now
+simply a macro that invokes `macros.import`!
 
 A macro module exports any number of functions which take code forms
 as arguments at compile time and emit lists which are fed back into
