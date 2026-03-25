@@ -1,11 +1,8 @@
 # Hello Github User!
 
-The Fennel project is in the process of [moving off
-Github](https://sfconservancy.org/GiveUpGitHub/).
+The Fennel project is [moving off Github](https://sfconservancy.org/GiveUpGitHub/).
 
-This repository will continue to be updated as a mirror for a while as
-we work to complete the move, but please switch your git remotes over
-to https://git.sr.ht/~technomancy/fennel
+Please switch your git remotes over to https://git.sr.ht/~technomancy/fennel
 
 You can open issues and submit patches at https://dev.fennel-lang.org
 and you don't need to create a new account; you can log in with your
@@ -14,6 +11,10 @@ existing github or fediverse account.
 If you really don't want to do that, you can continue to use Github
 pull requests and issues for a while, but eventually we will no longer
 support Github.
+
+Please note that any use of this project's code by Github Copilot,
+past or present, is done without our permission. We do not consent to
+use of this project's data in training Copilot or any other language model.
 
 ## Community
 
@@ -30,7 +31,7 @@ idea when that company has a history of abusing their monopoly.
 If you haven't taken a look at Github alternatives, now's a great time
 to evaluate a new home for your project! If you took a look at Gitlab
 a few years ago and were put off by its clunkiness and bugs, you
-should know things have gotten much better since then.
+should know that there are much better alternatives now.
 
 [Codeberg](https://codeberg.org/) is perhaps the most polished
 alternative, but [Sourcehut](https://git.sr.ht/) is also quite nice
