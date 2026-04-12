@@ -499,12 +499,15 @@ Only works on table fields or locals declared with var.")
         ;; table, string, and varg need to be wrapped
         root (if (root:match "^[.{\"]") (string.format "(%s)" root) root)
         keys (fcollect [i 3 (- (length ast) 1)]
-               (str1 (compiler.compile1 (. ast i) scope parent {:nval 1})))
+               (let [node (. ast i)]
+                 (if (and (utils.string? node) (utils.valid-lua-identifier? node))
+                     (.. "." node)
+                     (.. "[" (str1 (compiler.compile1 node scope parent {:nval 1})) "]"))))
         value (str1 (compiler.compile1 (. ast (length ast)) scope parent {:nval 1}))
         fmtstr (if (needs-separator? root (get-prev-line parent))
-                   "; %s[%s] = %s"
-                   "%s[%s] = %s")]
-    (compiler.emit parent (fmtstr:format root (table.concat keys "][") value) ast)))
+                   "; %s%s = %s"
+                   "%s%s = %s")]
+    (compiler.emit parent (fmtstr:format root (table.concat keys) value) ast)))
 
 (doc-special :tset [:tbl :key1 "..." :keyN :val]
              "Set the value of a table field. Usually better to use set.")
