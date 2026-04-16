@@ -368,7 +368,7 @@ Also returns a second function to clear the buffer in the byte stream."
 
     (fn parse-number [rawstr source]
       ;; numbers can have underscores in the middle or end, but not at the start
-      (let [trimmed (and (not (rawstr:find "^_")) (rawstr:gsub "_" ""))]
+      (let [trimmed (and (not (rawstr:find "^_")) (: (rawstr:gsub "_" "") :lower))]
         (if (or (= trimmed "nan") (= trimmed "-nan")) false ; 5.1 is weird
             (rawstr:match "^%d")
             (do
