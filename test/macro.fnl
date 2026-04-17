@@ -832,15 +832,15 @@
 
 (fn test-assert-compile-with-no-args []
   (will-raise (do (macro x [] (assert-compile)) (x))
-    "unknown:%?:%?: Compile error: nil"
-    (.. "assert-compile, with no args, shows nil message and question "
-        "marks for line/col numbers")))
+    "unknown:1:34: Compile error: nil"
+    (.. "assert-compile, with no args, shows nil message and line/col numbers "
+        "of the macro symbol itself by default")))
 
 (fn test-assert-compile-with-condition-only []
   (will-raise (do (macro x [] (assert-compile false)) (x))
-    "unknown:%?:%?: Compile error: nil"
-    (.. "assert-compile, with condition only, shows nil message and "
-      "question marks for line/col numbers")))
+    "unknown:1:40: Compile error: nil"
+    (.. "assert-compile, with condition only, shows nil message and line/col "
+        "numbers of the macro symbol itself by default")))
 
 (fn test-assert-compile-error-msg-output []
   (let [error-msg (.. "The self-destruction sequence has been activated. "
@@ -853,12 +853,12 @@
     (t.= false ok?)
     (t.match error-msg-pat msg "assert-compile, on failure, prints provided error message")))
 
-(fn test-assert-compile-with-unactionable-ast []
+(fn test-assert-compile-with-ast-with-unavailable-source []
   (will-raise (do
                 (macro x [] (assert-compile false nil (sym :lol)))
                 (x))
     "unknown:%?:%?: Compile error: nil"
-    (.. "assert-compile, provided an inlined symbol, still only shows "
+    (.. "assert-compile, provided an inlined symbol that fails, still only shows "
         "question marks for col/line numbers")))
 
 (fn test-assert-compile-with-sym-ast []
@@ -1021,7 +1021,7 @@
  : test-assert-compile-with-no-args
  : test-assert-compile-with-condition-only
  : test-assert-compile-error-msg-output
- : test-assert-compile-with-unactionable-ast
+ : test-assert-compile-with-ast-with-unavailable-source
  : test-assert-compile-with-sym-ast
  : test-assert-compile-with-list-ast
  : test-assert-repl

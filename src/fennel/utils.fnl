@@ -339,7 +339,11 @@ When f returns a truthy value, recursively walks the children."
   (walk (or ?custom-iterator pairs) nil nil root)
   root)
 
-(local root {:chunk nil :scope nil :options nil :reset (fn [])})
+(local root {:chunk nil
+             :macro-ast-stack []
+             :options nil
+             :reset (fn [])
+             :scope nil})
 
 (fn root.set-reset [{: chunk : scope : options : reset}]
   (fn root.reset []

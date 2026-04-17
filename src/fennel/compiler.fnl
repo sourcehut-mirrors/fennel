@@ -48,8 +48,14 @@ implement nesting. "
 The ast arg should be unmodified so that its first element is the form called."
   (when (not condition)
     (let [{: source : unfriendly : error-pinpoint} (or utils.root.options {})
-          ;; allow a fallback AST when the form itself has no source data
-          ast (if (next (utils.ast-source ?ast)) ?ast (or ?fallback-ast {}))]
+          ;; Use AST is valid, fallback AST if provided, or the AST of the
+          ;; macro currently being expanded.
+          ast (if (next (utils.ast-source ?ast))
+                  ?ast
+                  ?fallback-ast
+                  ?fallback-ast
+                  (next utils.root.macro-ast-stack)
+                  (. utils.root.macro-ast-stack (length utils.root.macro-ast-stack)))]
       ;; allow plugins to override assert-compile
       (when (= nil (utils.hook :assert-compile condition msg ast
                                utils.root.reset))
@@ -451,8 +457,9 @@ if opts contains the nval option."
     false ast
     macro* (let [old-scope scopes.macro
                  _ (set scopes.macro scope)
+                 _ (table.insert utils.root.macro-ast-stack ast)
                  (ok transformed) (xpcall #(macro* (unpack ast 2))
-                                          (if (built-in? macro*)
+                                            (if (built-in? macro*)
                                               tostring
                                               macro-traceback))]
              (utils.walk-tree transformed
@@ -461,7 +468,9 @@ if opts contains the nval option."
              (assert-compile ok transformed ast)
              (utils.hook :macroexpand ast transformed scope)
              (if (or ?once (not transformed))
-                 transformed
+                 (do
+                   (table.remove utils.root.macro-ast-stack)
+                   transformed)
                  (macroexpand* transformed scope)))
     _ ast))
 
