@@ -815,14 +815,70 @@
       {:hello "world" :greetings "comrade"}))
 
 (fn test-assert-compile []
-  (let [default ""
-        inactionable-ast ""
-        sym-ast ""
-        list-ast ""]
-    (t.is default)
-    (t.is inactionable-ast)
-    (t.is sym-ast)
-    (t.is list-ast)))
+  (let [eval (partial pcall fennel.eval)
+        error-msg (.. "The self-destruction sequence has been activated. "
+                      "All personal must evacuate immediately. "
+                      "Deactivating and releasing all locks.")
+        error-msg-pat (string.gsub error-msg "%-" "%%-")
+        ex-num 1.5
+        ex-str "Carlos"
+        examples {:success-num (string.format "(macro x [] (assert-compile %s)) (x)" ex-num)
+                  :success-string (string.format "(macro x [] (assert-compile \"%s\")) (x)" ex-str)
+                  :no-args "(macro x [] (assert-compile)) (x)"
+                  :no-msg "(macro x [] (assert-compile false)) (x)"
+                  :no-ast (string.format "(macro x [] (assert-compile false \"%s\")) (x)" error-msg)
+                  :unactionable-ast "(macro x [] (assert-compile false nil (sym :lol))) (x)"
+                  :sym-ast "
+                  (macro x []
+                    (macro bad [ast]
+                      (assert-compile false \"Where'd everyone go? Bingo?\" ast))
+
+                    (let [s (sym \"S.T.A.R.S.\")]
+                      (bad s)))
+                  (x)"
+
+                  :list-ast "
+                  (macro x []
+                    (macro bad [ast]
+                      (assert-compile false
+                                      \"You want this list? I'll give you this list.\"
+                                      ast))
+
+                    (let [l (list :S :T :A :R :S)]
+                      (bad s)))
+                  (x)"}
+        (success-num-pass? success-num-return) (eval examples.success-num)
+        (success-string-pass? success-string-return) (eval examples.success-string)
+        (no-args-pass? no-args-msg) (eval examples.no-args)
+        (no-msg-pass? no-msg-msg) (eval examples.no-msg)
+        (no-ast-pass? no-ast-msg) (eval examples.no-ast)
+        (unactionable-ast-pass? unactionable-ast-msg) (eval examples.unactionable-ast)
+        (sym-ast-pass? sym-ast-msg) (eval examples.sym-ast)
+        (list-ast-pass? list-ast-msg) (eval examples.list-ast)]
+    (t.= true success-num-pass?)
+    (t.= ex-num success-num-return)
+
+    (t.= true success-string-pass?)
+    (t.= ex-str success-string-return)
+
+    (t.= false no-args-pass?)
+    (t.match "unknown:%?:%?: Compile error: nil" no-args-msg)
+
+    (t.= false no-msg-pass?)
+    (t.match "unknown:%?:%?: Compile error: nil" no-msg-msg)
+
+    (t.= false no-ast-pass?)
+    (t.match "unknown:%?:%?: Compile error:" no-ast-msg)
+    (t.match error-msg-pat no-ast-msg)
+
+    (t.= false unactionable-ast-pass?)
+    (t.match "unknown:%?:%?: Compile error: nil" unactionable-ast-msg)
+
+    (t.= false sym-ast-pass?)
+    (t.match "unknown:7:22: Compile error: unknown:7:27: Compile error: " sym-ast-msg)
+
+    (t.= false list-ast-pass?)
+    (t.match "unknown:9:22: Compile error: unknown:9:27: Compile error: " list-ast-msg)))
 
 (fn test-assert-repl []
   (let [inputs ["x\n" "(inc x)\n" "(length hello)\n" ",return 22\n"]
