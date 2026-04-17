@@ -814,6 +814,16 @@
           (splice {:greetings "comrade"}))
       {:hello "world" :greetings "comrade"}))
 
+(fn test-assert-compile []
+  (let [default ""
+        inactionable-ast ""
+        sym-ast ""
+        list-ast ""]
+    (t.is default)
+    (t.is inactionable-ast)
+    (t.is sym-ast)
+    (t.is list-ast)))
+
 (fn test-assert-repl []
   (let [inputs ["x\n" "(inc x)\n" "(length hello)\n" ",return 22\n"]
         outputs []
@@ -942,6 +952,7 @@
  : test-lua-module
  : test-disabled-sandbox-searcher
  : test-read-only
+ : test-assert-compile
  : test-assert-repl
  : test-assert-as-repl
  : test-expand
