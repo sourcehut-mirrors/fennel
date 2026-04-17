@@ -43,7 +43,7 @@ implement nesting. "
 
 ;; If you add new calls to this function, please update fennel.friend
 ;; as well to add suggestions for how to fix the new error!
-(fn assert-compile [condition msg ?ast ?fallback-ast]
+(fn assert-compile [condition ?msg ?ast ?fallback-ast]
   "Assert a condition and raise a compile error with line numbers.
 The ast arg should be unmodified so that its first element is the form called."
   (when (not condition)
@@ -55,7 +55,8 @@ The ast arg should be unmodified so that its first element is the form called."
                   ?fallback-ast
                   ?fallback-ast
                   (next utils.root.macro-ast-stack)
-                  (. utils.root.macro-ast-stack (length utils.root.macro-ast-stack)))]
+                  (. utils.root.macro-ast-stack (length utils.root.macro-ast-stack)))
+          msg (or ?msg "No error message provided")]
       ;; allow plugins to override assert-compile
       (when (= nil (utils.hook :assert-compile condition msg ast
                                utils.root.reset))

@@ -185,6 +185,10 @@
      ["renaming local %s"
       "refer to the global using _G.%s instead of directly"])
 
+(pal "No error message provided"
+     ["providing an error message when calling assert-compile"
+      "ensuring that any error message variable provided is not nil"])
+
 (fn suggest [msg]
   (accumulate [s nil pat sug (pairs suggestions) :until s]
     (let [matches [(msg:match pat)]]
