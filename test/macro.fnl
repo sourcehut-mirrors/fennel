@@ -16,6 +16,11 @@
      (t.is ok# val#)
      (t.= ,expected val# ,?msg)))
 
+(macro will-raise [form error-msg-pat ?msg]
+  `(let [(ok# val#) (pcall fennel.eval ,(view form))]
+     (t.= false ok#)
+     (t.match ,error-msg-pat val# ,?msg)))
+
 (fn test-lambda []
   (lambda arglist-lambda [x_]
     "docstring"
@@ -29,8 +34,9 @@
     (t.= [:z] (. fennel.metadata l2 :fnl/arglist)))
   (fn call-lambda [] (arglist-lambda nil) nil)
   (let [(_ok msg) (pcall call-lambda)]
-    (t.match "test/macro.fnl:20" msg)
+    (t.match "test/macro.fnl:25" msg)
     nil))
+
 
 (fn test-arrows []
   (== (-> (+ 85 21) (+ 1) (- 99)) 8)
@@ -815,36 +821,26 @@
       {:hello "world" :greetings "comrade"}))
 
 (fn test-assert-compile-return-value []
-  (let [ex-num 1.5
-        ex-str "Carlos"
-        num-form (string.format "(macro x [] (assert-compile %s)) (x)" ex-num)
-        str-form (string.format "(macro x [] (assert-compile \"%s\")) (x)" ex-str)
-        (success-num-pass? success-num-return) (pcall fennel.eval num-form)
-        (success-string-pass? success-string-return) (pcall fennel.eval str-form)]
-    (t.= true success-num-pass?)
-    (t.= ex-num success-num-return
-         "assert-compile returns condition evaluation result")
-
-    (t.= true success-string-pass?)
-    (t.= ex-str success-string-return
-         "assert-compile returns condition evaluation result")))
+  (== (do
+        (macro x [] (assert-compile 1.5))
+        (x))
+      1.5 "assert-compile returns condition evaluation result")
+  (== (do
+        (macro x [] (assert-compile "Kendo"))
+        (x))
+      "Kendo" "assert-compile returns condition evaluation result"))
 
 (fn test-assert-compile-with-no-args []
-  (let [form "(macro x [] (assert-compile)) (x)"
-        (ok? msg) (pcall fennel.eval form)]
-    (t.= false ok?)
-    (t.match "unknown:%?:%?: Compile error: nil" msg
-             (.. "assert-compile, with no args, shows nil message and question "
-                 "marks for line/col numbers"))))
+  (will-raise (do (macro x [] (assert-compile)) (x))
+    "unknown:%?:%?: Compile error: nil"
+    (.. "assert-compile, with no args, shows nil message and question "
+        "marks for line/col numbers")))
 
 (fn test-assert-compile-with-condition-only []
-  (let [form "(macro x [] (assert-compile false)) (x)"
-        (ok? msg) (pcall fennel.eval form)]
-
-    (t.= false ok?)
-    (t.match "unknown:%?:%?: Compile error: nil" msg
-             (.. "assert-compile, with condition only, shows nil message and "
-                 "question marks for line/col numbers"))))
+  (will-raise (do (macro x [] (assert-compile false)) (x))
+    "unknown:%?:%?: Compile error: nil"
+    (.. "assert-compile, with condition only, shows nil message and "
+      "question marks for line/col numbers")))
 
 (fn test-assert-compile-error-msg-output []
   (let [error-msg (.. "The self-destruction sequence has been activated. "
@@ -858,45 +854,40 @@
     (t.match error-msg-pat msg "assert-compile, on failure, prints provided error message")))
 
 (fn test-assert-compile-with-unactionable-ast []
-  (let [form "(macro x [] (assert-compile false nil (sym :lol))) (x)"
-        (ok? msg) (pcall fennel.eval form)]
-    (t.= false ok?)
-    (t.match "unknown:%?:%?: Compile error: nil" msg
-             (.. "assert-compile, provided an inlined symbol, still only shows "
-                 "question marks for col/line numbers"))))
+  (will-raise (do
+                (macro x [] (assert-compile false nil (sym :lol)))
+                (x))
+    "unknown:%?:%?: Compile error: nil"
+    (.. "assert-compile, provided an inlined symbol, still only shows "
+        "question marks for col/line numbers")))
 
 (fn test-assert-compile-with-sym-ast []
-  (let [form "
-        (macro x []
-          (macro bad [ast]
-            (assert-compile false \"Where'd everyone go? Bingo?\" ast))
+  (will-raise (do
+                (macro x []
+                  (macro bad [ast]
+                    (assert-compile false "Where'd everyone go? Bingo?" ast))
 
-          (let [s (sym \"Los ganados\")]
-            (bad s)))
-        (x)"
-
-        (ok? msg) (pcall fennel.eval form)]
-    (t.= false ok?)
-    (t.match "unknown:7:12: Compile error: unknown:7:17: Compile error: " msg
-             (.. "assert-compile, given a symbol from a different context, shows "
-                 "valid line/col numbers"))))
+                  (let [s (sym "Los ganados")]
+                    (bad s)))
+                (x))
+    "unknown:1:120: Compile error: unknown:1:125: Compile error: "
+    (.. "assert-compile, given a symbol from a different context, shows "
+        "valid line/col numbers")))
 
 (fn test-assert-compile-with-list-ast []
-  (let [form "
-        (macro x []
-          (macro bad [ast]
-            (assert-compile false
-                            \"You want this list? I'll give you this list.\"
-                            ast))
+  (will-raise (do
+                (macro x []
+                  (macro bad [ast]
+                    (assert-compile false
+                                    "You want this list? I'll give you this list."
+                                    ast))
 
-          (let [l (list :S :T :A :R :S)]
-            (bad s)))
-        (x)"
-        (ok? msg) (pcall fennel.eval form)]
-    (t.= false ok?)
-    (t.match "unknown:9:12: Compile error: unknown:9:17: Compile error: " msg
-             (.. "assert-compile, given a list from a different context, shows "
-                 "valid line/col numbers"))))
+                  (let [l (list :S :T :A :R :S)]
+                    (bad s)))
+                (x))
+    "unknown:1:144: Compile error: unknown:1:149: Compile error: "
+    (.. "assert-compile, given a list from a different context, shows "
+        "valid line/col numbers")))
 
 (fn test-assert-repl []
   (let [inputs ["x\n" "(inc x)\n" "(length hello)\n" ",return 22\n"]
