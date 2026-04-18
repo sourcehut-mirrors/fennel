@@ -17,7 +17,7 @@
      (t.= ,expected val# ,?msg)))
 
 (macro will-raise [form error-msg-pat ?msg]
-  `(let [(ok# val#) (pcall fennel.eval ,(view form))]
+  `(let [(ok# val#) (pcall fennel.eval ,form)]
      (t.= false ok#)
      (t.match ,error-msg-pat val# ,?msg)))
 
@@ -827,59 +827,59 @@
       "Kendo" "assert-compile returns condition evaluation result"))
 
 (fn test-assert-compile-with-no-args []
-  (will-raise (do (macro x [] (assert-compile)) (x))
+  (will-raise "(do (macro x [] (assert-compile)) (x))"
     "unknown:1:34: Compile error: unknown:1:34: Compile error: No error message provided"
     (.. "assert-compile, with no args, shows nil message and line/col numbers "
         "of the macro symbol itself by default")))
 
 (fn test-assert-compile-with-condition-only []
-  (will-raise (do (macro x [] (assert-compile false)) (x))
+  (will-raise "(do (macro x [] (assert-compile false)) (x))"
     "unknown:1:40: Compile error: unknown:1:40: Compile error: No error message provided"
     (.. "assert-compile, with condition only, shows nil message and line/col "
         "numbers of the macro symbol itself by default")))
 
 (fn test-assert-compile-with-ast-with-unavailable-source []
-  (will-raise (do
+  (will-raise "(do
                 (macro x [] (assert-compile false nil (sym :lol)))
-                (x))
-    "unknown:1:56: Compile error: unknown:%?:%?: Compile error: No error message provided"
+                (x))"
+    "unknown:3:16: Compile error: unknown:%?:%?: Compile error: No error message provided"
     (.. "assert-compile, provided an inlined symbol that fails, only shows "
         "question marks for col/line numbers")))
 
 (fn test-assert-compile-with-fallback-ast []
-  (will-raise (do
+  (will-raise "(do
                 (macro x []
-                  (assert-compile false "Jill" nil
+                  (assert-compile false :Jill nil
                                   (setmetatable {} {:line 13 :col 37})))
-                (x))
+                (x))"
     "unknown:13:37: Compile error: Jill"
     "assert-compile accepts a fallback AST"))
 
 (fn test-assert-compile-with-sym-ast []
-  (will-raise (do
+  (will-raise "(do
                 (macro x []
                   (macro bad [ast]
-                    (assert-compile false "Where'd everyone go? Bingo?" ast))
+                    (assert-compile false \"Where'd everyone go? Bingo?\" ast))
 
-                  (let [s (sym "Los ganados")]
+                  (let [s (sym \"Los ganados\")]
                     (bad s)))
-                (x))
-    "unknown:1:120: Compile error: unknown:1:125: Compile error: Where'd everyone go%? Bingo%?"
+                (x))"
+    "unknown:7:20: Compile error: unknown:7:25: Compile error: Where'd everyone go%? Bingo%?"
     (.. "assert-compile, given a symbol from a different context, shows "
         "valid line/col numbers")))
 
 (fn test-assert-compile-with-list-ast []
-  (will-raise (do
+  (will-raise "(do
                 (macro wrap []
                   (macro bad [ast]
                     (assert-compile false
-                                    "You want this list? I'll give you this list."
+                                    \"You want this list? I'll give you this list.\"
                                     ast))
 
                   (let [l (list :S :T :A :R :S)]
                     (bad l)))
-                (wrap))
-    "unknown:1:147: Compile error: unknown:1:152: Compile error: You want this list%? I'll give you this list."
+                (wrap))"
+    "unknown:9:20: Compile error: unknown:9:25: Compile error: You want this list%? I'll give you this list."
     (.. "assert-compile, given a list from a different context, shows "
         "valid line/col numbers")))
 
