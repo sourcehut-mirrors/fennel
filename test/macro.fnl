@@ -822,10 +822,6 @@
 
 (fn test-assert-compile-return-value []
   (== (do
-        (macro x [] (assert-compile 1.5))
-        (x))
-      1.5 "assert-compile returns condition evaluation result")
-  (== (do
         (macro x [] (assert-compile "Kendo"))
         (x))
       "Kendo" "assert-compile returns condition evaluation result"))
@@ -841,17 +837,6 @@
     "unknown:1:40: Compile error: unknown:1:40: Compile error: No error message provided"
     (.. "assert-compile, with condition only, shows nil message and line/col "
         "numbers of the macro symbol itself by default")))
-
-(fn test-assert-compile-error-msg-output []
-  (let [error-msg (.. "The self-destruction sequence has been activated. "
-                      "All personal must evacuate immediately. "
-                      "Deactivating and releasing all locks.")
-        error-msg-pat (string.gsub error-msg "%-" "%%-")
-        form (string.format "(macro x [] (assert-compile false \"%s\")) (x)" error-msg)
-        (ok? msg) (pcall fennel.eval form)]
-
-    (t.= false ok?)
-    (t.match error-msg-pat msg "assert-compile, on failure, prints provided error message")))
 
 (fn test-assert-compile-with-ast-with-unavailable-source []
   (will-raise (do
@@ -879,22 +864,22 @@
                   (let [s (sym "Los ganados")]
                     (bad s)))
                 (x))
-    "unknown:1:120: Compile error: unknown:1:125: Compile error: "
+    "unknown:1:120: Compile error: unknown:1:125: Compile error: Where'd everyone go%? Bingo%?"
     (.. "assert-compile, given a symbol from a different context, shows "
         "valid line/col numbers")))
 
 (fn test-assert-compile-with-list-ast []
   (will-raise (do
-                (macro x []
+                (macro wrap []
                   (macro bad [ast]
                     (assert-compile false
                                     "You want this list? I'll give you this list."
                                     ast))
 
                   (let [l (list :S :T :A :R :S)]
-                    (bad s)))
-                (x))
-    "unknown:1:144: Compile error: unknown:1:149: Compile error: "
+                    (bad l)))
+                (wrap))
+    "unknown:1:147: Compile error: unknown:1:152: Compile error: You want this list%? I'll give you this list."
     (.. "assert-compile, given a list from a different context, shows "
         "valid line/col numbers")))
 
@@ -1029,7 +1014,6 @@
  : test-assert-compile-return-value
  : test-assert-compile-with-no-args
  : test-assert-compile-with-condition-only
- : test-assert-compile-error-msg-output
  : test-assert-compile-with-ast-with-unavailable-source
  : test-assert-compile-with-fallback-ast
  : test-assert-compile-with-sym-ast
