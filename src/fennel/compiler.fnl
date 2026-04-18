@@ -463,15 +463,14 @@ if opts contains the nval option."
                                             (if (built-in? macro*)
                                               tostring
                                               macro-traceback))]
+             (table.remove utils.root.macro-ast-stack)
              (utils.walk-tree transformed
                               #(propagate-trace-info ast (quote-literal-nils $...)))
              (set scopes.macro old-scope)
              (assert-compile ok transformed ast)
              (utils.hook :macroexpand ast transformed scope)
              (if (or ?once (not transformed))
-                 (do
-                   (table.remove utils.root.macro-ast-stack)
-                   transformed)
+                 transformed
                  (macroexpand* transformed scope)))
     _ ast))
 
