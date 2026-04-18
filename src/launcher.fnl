@@ -86,7 +86,7 @@ If ~/.fennelrc exists, it will be loaded before launching a REPL.")
       (table.insert cmd (string.format "%q" (. arg i))))
     (when (= nil (. arg -1))
       (io.stderr:write
-       "WARNING: --lua argument only works from script, not binary.\n"))
+       "--WARNING: --lua argument only works from script, not binary.\n"))
     (case (os.execute (table.concat cmd " "))
       (where (or (true :exit) 0)) (os.exit 0)
       _ (os.exit 1))))
@@ -234,7 +234,7 @@ If ~/.fennelrc exists, it will be loaded before launching a REPL.")
 
 (fn compile [files]
   (when (= nil options.allowedGlobals)
-    (io.stderr:write (.. "WARNING: compiling without global checks; "
+    (io.stderr:write (.. "--WARNING: compiling without global checks; "
                          "recommend using --globals \"\"\n")))
   (each [_ filename (ipairs files)]
     (set options.filename filename)
