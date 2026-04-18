@@ -152,16 +152,19 @@ By default, start is 2."
       (set i 2))
     (values (. ast i) (= nil (. ast (+ i 1))))))
 
-(fn SPECIALS.values [ast scope parent]
-  (let [exprs []]
-    (each [subast last? (iter-args ast)]
-      (let [subexprs (compiler.compile1 subast scope parent
-                                        {:nval (and (not last?) 1)})]
-        (table.insert exprs (. subexprs 1))
-        (when last?
-          (for [j 2 (length subexprs)]
-            (table.insert exprs (. subexprs j))))))
-    exprs))
+(fn SPECIALS.values [ast scope parent opts]
+  (if (= (length ast) 2)
+    ;; in the trivial case, we can pass opts to the child
+    (compiler.compile1 (. ast 2) scope parent opts)
+    (let [exprs []]
+      (each [subast last? (iter-args ast)]
+        (let [subexprs (compiler.compile1 subast scope parent
+                                          {:nval (and (not last?) 1)})]
+          (table.insert exprs (. subexprs 1))
+          (when last?
+            (for [j 2 (length subexprs)]
+              (table.insert exprs (. subexprs j))))))
+      exprs)))
 
 (doc-special :values ["..."]
              "Return multiple values from a function. Must be in tail position.")
