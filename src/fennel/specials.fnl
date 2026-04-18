@@ -121,7 +121,8 @@ By default, start is 2."
         ;; generate a local target
         (let [syms []]
           (for [i 1 opts.nval]
-            (let [s (or (and ?pre-syms (. ?pre-syms i)) (compiler.gensym scope))]
+            (let [s (or (and ?pre-syms (. ?pre-syms i))
+                        (compiler.gensym scope :do_tgt))]
               (tset syms i s)
               (tset retexprs i (utils.expr s :sym))))
           (let [outer-target (table.concat syms ", ")]
@@ -129,7 +130,7 @@ By default, start is 2."
             (compiler.emit parent :do ast)
             (compile-body outer-target opts.tail)))
         ;; we will use an IIFE for the do
-        (let [fname (compiler.gensym scope)
+        (let [fname (compiler.gensym scope :do_iife)
               fargs (if scope.vararg "..." "")]
           (compiler.emit parent
                          (string.format "local function %s(%s)" fname fargs) ast)
@@ -278,7 +279,7 @@ By default, start is 2."
   ;; a function is a chunk with many lines, and the current representation of
   ;; an expr can only be a string, making it difficult to pass around without
   ;; losing line numbering information.
-  (let [fn-name (compiler.gensym scope)]
+  (let [fn-name (compiler.gensym scope :fn)]
     (compile-named-fn ast f-scope f-chunk parent index fn-name true
                       arg-name-list f-metadata)))
 
@@ -322,7 +323,7 @@ By default, start is 2."
                (not (compiler.global-allowed? (. multi 1))))
       (compiler.assert nil (.. "expected local table " (. multi 1)) (. ast 2)))
     (fn destructure-arg [arg]
-      (let [raw (utils.sym (compiler.gensym scope))
+      (let [raw (utils.sym (compiler.gensym scope :arg))
             declared (compiler.declare-local raw f-scope ast)]
         (compiler.destructure arg raw ast f-scope f-chunk
                               {:declaration true
@@ -468,7 +469,7 @@ Only works on table fields or locals declared with var.")
   (compiler.assert (<= 3 (length ast)) "expected body expression" (. ast 1))
   ;; we have to gensym the binding for the let body's return value before
   ;; compiling the binding vector, otherwise there's a possibility to conflict
-  (let [pre-syms (fcollect [_ 1 (or opts.nval 0)] (compiler.gensym scope))
+  (let [pre-syms (fcollect [_ 1 (or opts.nval 0)] (compiler.gensym scope :let))
         sub-scope (compiler.make-scope scope)
         sub-chunk []]
     (for [i 1 (length bindings) 2]
@@ -520,7 +521,7 @@ Only works on table fields or locals declared with var.")
             target-exprs []]
         ;; We need to create a target
         (for [i 1 opts.nval]
-          (let [s (compiler.gensym scope)]
+          (let [s (compiler.gensym scope :if_tgt)]
             (tset accum i s)
             (tset target-exprs i (utils.expr s :sym))))
         (values :target opts.tail (table.concat accum ", ") target-exprs))
@@ -564,7 +565,7 @@ Only works on table fields or locals declared with var.")
           (table.insert branches branch)))
       ;; Emit code
       (let [else-branch (compile-body (length ast))
-            s (compiler.gensym scope)
+            s (compiler.gensym scope :if_else)
             buffer []]
         (var last-buffer buffer)
         (for [i 1 (length branches)]
@@ -661,7 +662,7 @@ the condition evaluates to truthy. Similar to cond in other lisps.")
     (fn destructure-binding [v]
       (if (utils.sym? v)
           (compiler.declare-local v sub-scope ast nil deferred-scope-changes)
-          (let [raw (utils.sym (compiler.gensym sub-scope))]
+          (let [raw (utils.sym (compiler.gensym sub-scope :each))]
             (tset destructures raw v)
             (compiler.declare-local raw sub-scope ast))))
 
@@ -778,7 +779,7 @@ Evaluates body once for each value between start and stop (inclusive)." true)
 (fn binding-method-call [ast scope parent target args]
   "When double-evaluation is a concern, we have to bind to a local."
   (let [method-string (str1 (compiler.compile1 (. ast 3) scope parent {:nval 1}))
-        target-local (compiler.gensym scope :tgt)
+        target-local (compiler.gensym scope :m_tgt)
         args [target-local (unpack args)]]
     (compiler.emit parent (string.format "local %s = %s" target-local (tostring target)))
     (utils.expr (string.format "(%s)[%s](%s)" target-local method-string
@@ -831,7 +832,7 @@ Method name doesn't have to be known at compile-time; if it is, use
                   (tset :vararg false)
                   (tset :hashfn true))
         f-chunk []
-        name (compiler.gensym scope)
+        name (compiler.gensym scope :hashfn)
         symbol (utils.sym name)
         args []]
     (compiler.declare-local symbol scope ast)
@@ -1067,7 +1068,7 @@ Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
       (let [compiled (str1 (compiler.compile1 (. ast i) scope parent {:nval 1}))]
         (if (or (utils.idempotent-expr? (. ast i)) (= i 2) (= i (length ast)))
           (table.insert vals compiled)
-          (let [my-sym (compiler.gensym scope)]
+          (let [my-sym (compiler.gensym scope :comp)]
             (table.insert binding-left my-sym)
             (table.insert binding-right compiled)
             (table.insert vals my-sym)))))
