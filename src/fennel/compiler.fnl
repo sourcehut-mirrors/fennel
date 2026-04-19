@@ -614,6 +614,7 @@ Fields of `opts` include:
   tail: boolean indicating tail position if set. If set, form will generate
      a return instruction.
   nval: The number of values to compile to if it is known to be a fixed value.
+        Currently always nil (unknown), 0, or 1.
 
 In Lua, an expression can evaluate to 0 or more values via multiple returns. In
 many cases, Lua will drop extra values and convert a 0 value expression to
