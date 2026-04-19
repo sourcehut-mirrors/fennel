@@ -112,6 +112,10 @@
   (let [not-unqualified "(import-macros hi :test.macros) (print (inc 1))"]
     (t.is (not (pcall fennel.eval not-unqualified))))
   (== 2 (do (import-macros {: gensym-shadow} :test.macros) (gensym-shadow)))
+  (== 11 (do (import-macros {: inc &as m} :test.macros)
+             (var n 9)
+             (m.inc! n)
+             (inc n)))
   (== ["callable table macro" "sub-macro on a callable table macro"]
       (do (import-macros {: tbl-macro} :test.macros) [(tbl-macro) (tbl-macro.sub-macro)])
       "import callable table macros with destructuring")

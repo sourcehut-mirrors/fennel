@@ -388,11 +388,14 @@ Example:
           ;; 1-level table destructuring for importing individual macros
           (table? binding)
           (each [macro-name [import-key] (pairs binding)]
-            (assert (utils.callable? (. macros* macro-name))
-                    (.. "macro " macro-name " not found in module "
-                        (tostring modname)
-                        "\n" (view macros*)))
-            (tset scope.macros import-key (. macros* macro-name))))))
+            (if (sym? macro-name "&as")
+                (tset scope.macros import-key macros*)
+                (do
+                  (assert (utils.callable? (. macros* macro-name))
+                          (.. "macro " macro-name " not found in module "
+                              (tostring modname)
+                              "\n" (view macros*)))
+                  (tset scope.macros import-key (. macros* macro-name))))))))
   nil)
 
 (fn assert-repl* [condition ...]
