@@ -888,10 +888,10 @@ which we have to do if we don't know."
   (scopes.global.specials.include ast scope parent opts))
 
 (fn with-open* [[_ bindings &as ast] scope parent opts]
-  (assert-compile (utils.sequence? bindings) (or bindings (. ast 1)))
+  (assert-compile (utils.sequence? bindings) "expected binding sequente" bindings)
   (for [i 1 (length bindings) 2]
     (assert-compile (utils.sym? (. bindings i))
-                    "with-open only allows symbols in bindings")
+                    "with-open only allows symbols in bindings" bindings)
     (tset (. bindings i) :to-be-closed true))
   (scope.specials.let ast scope parent opts))
 
