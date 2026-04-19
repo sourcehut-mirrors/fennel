@@ -846,15 +846,6 @@
     (.. "assert-compile, provided an inlined symbol that fails, only shows "
         "question marks for col/line numbers")))
 
-(fn test-assert-compile-with-fallback-ast []
-  (will-raise "(do
-                (macro x []
-                  (assert-compile false :Jill nil
-                                  (setmetatable {} {:line 13 :col 37})))
-                (x))"
-    "unknown:13:37: Compile error: Jill"
-    "assert-compile accepts a fallback AST"))
-
 (fn test-assert-compile-with-sym-ast []
   (will-raise "(do
                 (macro x []
@@ -1015,7 +1006,6 @@
  : test-assert-compile-with-no-args
  : test-assert-compile-with-condition-only
  : test-assert-compile-with-ast-with-unavailable-source
- : test-assert-compile-with-fallback-ast
  : test-assert-compile-with-sym-ast
  : test-assert-compile-with-list-ast
  : test-assert-repl

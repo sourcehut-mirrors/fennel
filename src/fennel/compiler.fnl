@@ -43,17 +43,13 @@ implement nesting. "
 
 ;; If you add new calls to this function, please update fennel.friend
 ;; as well to add suggestions for how to fix the new error!
-(fn assert-compile [condition ?msg ?ast ?fallback-ast]
+(fn assert-compile [condition ?msg ?ast]
   "Assert a condition and raise a compile error with line numbers.
 The ast arg should be unmodified so that its first element is the form called."
   (when (not condition)
     (let [{: source : unfriendly : error-pinpoint} (or utils.root.options {})
-          ;; Use AST is valid, fallback AST if provided, or the AST of the
-          ;; macro currently being expanded.
-          ast (if (next (utils.ast-source ?ast))
-                  ?ast
-                  ?fallback-ast
-                  ?fallback-ast
+          ;; Use AST if valid or the AST of the macro currently being expanded.
+          ast (if (next (utils.ast-source ?ast)) ?ast
                   (next utils.root.macro-ast-stack)
                   (. utils.root.macro-ast-stack (length utils.root.macro-ast-stack)))
           msg (or ?msg "No error message provided")]
@@ -870,7 +866,7 @@ which we have to do if we don't know."
           (do (assert-compile top? "can't nest multi-value destructuring" left)
               (destructure-values left rightexprs up1 destructure1 true))
           (assert-compile false (: "unable to bind %s %s" :format
-                                   (type left) (tostring left)) (. up1 2) up1))
+                                   (type left) (tostring left)) (. up1 2)))
       (and top? {:returned true}))
 
     (let [ret (destructure1 to from ast true)]

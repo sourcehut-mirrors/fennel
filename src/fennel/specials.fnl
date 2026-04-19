@@ -336,8 +336,7 @@ By default, start is 2."
 
     (fn destructure-amp [i]
       (compiler.assert (= i (- (length arg-list) 1))
-                       "expected rest argument before last parameter"
-                       (. arg-list (+ i 1)) arg-list)
+                       "expected rest argument before last parameter" arg-list)
       (set f-scope.vararg true)
       (compiler.destructure (. arg-list (length arg-list)) [(utils.varg)]
                             ast f-scope f-chunk
