@@ -393,9 +393,9 @@ and lacking args will be nil, use lambda for functions with nil checks." true)
   (compiler.assert (< 1 (length ast)) "expected table argument" ast)
   (let [len (length ast)
         lhs-node (compiler.macroexpand (. ast 2) scope)
-        [lhs] (compiler.compile1 lhs-node scope parent {:nval 1})]
+        lhs (str1 (compiler.compile1 lhs-node scope parent {:nval 1}))]
     (if (= len 2)
-        (tostring lhs)
+        lhs
         (let [indices []]
           (for [i 3 len]
             (let [index (. ast i)]
@@ -404,12 +404,11 @@ and lacking args will be nil, use lambda for functions with nil checks." true)
                   (table.insert indices (.. "." index))
                   (let [[index] (compiler.compile1 index scope parent {:nval 1})]
                     (table.insert indices (.. "[" (tostring index) "]"))))))
-          ;; Extra parens are needed if the target is a literal
-          (if (or (not (or (utils.sym? lhs-node)
-                           (utils.list? lhs-node)))
-                  (= :nil (tostring lhs-node)))
-              (.. "(" (tostring lhs) ")" (table.concat indices))
-              (.. (tostring lhs) (table.concat indices)))))))
+          ;; Extra parens are needed if the target is a literal/length
+          (if (or (not (or (utils.sym? lhs-node) (utils.list? lhs-node)))
+                  (lhs:find "^#") (= :nil (tostring lhs-node)))
+              (.. "(" lhs ")" (table.concat indices))
+              (.. lhs (table.concat indices)))))))
 
 (tset SPECIALS "." dot)
 
