@@ -38,8 +38,8 @@ Examples of unacceptable behavior by participants include:
   * Publishing others' private information, such as a physical or electronic address, without explicit permission. This includes any sort of "outing" of any aspect of someone's identity without their consent.
   * Publishing screenshots or quotes without all quoted users' *explicit* consent.
   * Publishing of non-harassing private communication.
-  * Answering a good-faith question with an LLM-generated response. ("I asked Claude, and it said ...")
-  * Submitting LLM-generated patches or issues.
+  * Answering a good-faith question with an LLM-generated response. ("I don't know, but I asked Claude, and it said ...")
+  * Submitting LLM-generated patches, issues, or comments.
   * Posting any LLM-generated content in any forum that is not clearly marked as such.
   * Any of the above even when [presented as "ironic" or "joking"](https://en.wikipedia.org/wiki/Hipster_racism).
   * Any attempt to present "reverse-ism" versions of the above as violations. Examples of reverse-isms are "reverse racism", "reverse sexism", "heterophobia", and "cisphobia".
@@ -50,7 +50,7 @@ Examples of unacceptable behavior by participants include:
 
 ## Scope
 
-This Code of Conduct applies both within community spaces and in other spaces involving the community. This includes the Fennel Email list, #fennel IRC channel on Libera Chat and Matrix, private email communications in the context of the community, FennelConf and any other events where members of the community are participating, as well as adjacent communities and venues affecting the community's members.
+This Code of Conduct applies both within community spaces and in other spaces involving the community. This includes the Fennel Email list, #fennel IRC channel on Libera Chat and Matrix, issue trackers, private email communications in the context of the community, FennelConf and any other events where members of the community are participating, as well as adjacent communities and venues affecting the community's members.
 
 Depending on the violation, the admins may decide that violations of this code of conduct that have happened outside of the scope of the community may deem an individual unwelcome, and take appropriate action to maintain the comfort and safety of its members.
 
