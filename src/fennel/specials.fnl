@@ -933,7 +933,9 @@ Method name doesn't have to be known at compile-time; if it is, use
   (compiler.assert (not (and (= (length ast) 2)
                              (utils.varg? (. ast 2))))
                    "tried to use vararg with operator" ast)
-  (let [padded-op (.. " " name " ")]
+  (let [padded-op (.. " " name " ")
+        ;; the ^ operator has the highest precedence; unary operators need help
+        wrap-unary (= name "^")]
     (var (operands accumulator) [])
     (when (utils.call-of? (. ast (length ast)) :values)
       (utils.warn "multiple values in operators are deprecated" ast))
@@ -955,7 +957,7 @@ Method name doesn't have to be known at compile-time; if it is, use
             ;; Previous operands have been emitted, so we start fresh
             (set operands [accumulator]))
           (table.insert operands (str1 (compiler.compile1 subast scope parent
-                                                          {:nval 1})))))
+                                                          {:nval 1 : wrap-unary})))))
     (operator-special-result ast zero-arity unary-prefix padded-op operands)))
 
 (fn define-arithmetic-special [name ?zero-arity ?unary-prefix ?lua-name]
@@ -1030,11 +1032,13 @@ Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
 (doc-special :bxor [:x1 :x2 "..."] "Bitwise XOR of any number of arguments.
 Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
 
-(fn SPECIALS.bnot [ast scope parent]
+(fn SPECIALS.bnot [ast scope parent opts]
   (compiler.assert (= (length ast) 2) "expected one argument" ast)
   (let [[value] (compiler.compile1 (. ast 2) scope parent {:nval 1})]
     (if utils.root.options.useBitLib
         (.. "bit.bnot(" (tostring value) ")")
+        opts.wrap-unary
+        (.. "(~(" (tostring value) "))")
         (.. "~(" (tostring value) ")"))))
 
 (doc-special :bnot [:x] "Bitwise negation; only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
@@ -1106,10 +1110,13 @@ Only works in Lua 5.3+ or LuaJIT with the --use-bit-lib flag.")
 (define-comparator-special :not= "~=" :or)
 
 (fn define-unary-special [op ?realop]
-  (fn opfn [ast scope parent]
+  (fn opfn [ast scope parent opts]
     (compiler.assert (= (length ast) 2) "expected one argument" ast)
-    (let [tail (compiler.compile1 (. ast 2) scope parent {:nval 1})]
-      (.. (or ?realop op) (str1 tail))))
+    (let [tail (compiler.compile1 (. ast 2) scope parent {:nval 1})
+          out (.. (or ?realop op) (str1 tail))]
+      (if opts.wrap-unary
+          (.. "(" out ")")
+          out)))
 
   (tset SPECIALS op opfn))
 

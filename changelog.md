@@ -15,6 +15,10 @@ deprecated forms.
 * Macros (and specials) can now also be implemented as callable tables,
   allowing the introduction of new built-ins without scope conflicts.
 
+### Bug Fixes
+
+* Fix some precedence issues with exponentiation operator `^`.
+
 ## 1.6.1 / 2025-12-30
 
 * Fix a bug where pattern matches on `...` could error out.
