@@ -564,7 +564,8 @@ if opts contains the nval option."
     :nil :nil
     :boolean (tostring ast)
     :string (serialize-string ast)
-    :number (view ast view-opts)))
+    :number (view ast view-opts)
+    (where :cdata (utils.luajit-64-bit-int? ast)) (tostring ast)))
 
 (fn compile-scalar [ast _scope parent opts]
   (handle-compile-opts [(utils.expr (serialize-scalar ast) :literal)] parent opts))
@@ -632,7 +633,7 @@ which we have to do if we don't know."
         (= (type ast) :table)
         (compile-table ast scope parent opts compile1)
         (or (= (type ast) :nil) (= (type ast) :boolean) (= (type ast) :number)
-            (= (type ast) :string))
+            (= (type ast) :string) (utils.luajit-64-bit-int? ast))
         (compile-scalar ast scope parent opts)
         (assert-compile false
                         (.. "could not compile value of type " (type ast)) ast))))

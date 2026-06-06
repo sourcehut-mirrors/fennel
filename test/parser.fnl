@@ -44,6 +44,66 @@
   (t.= :not-really (fennel.eval "(let [nan :not-really] nan)"))
   (t.= :nah (fennel.eval "(let [-nan :nah] -nan)")))
 
+(fn test-64-bit-int-lits []
+  (if (utils.luajit-vm?)
+      (do
+        (t.= "-9223372036854775808LL" (tostring (fennel.eval "-9223372036854775808LL")))
+        (t.= "9223372036854775807LL" (tostring (fennel.eval "9223372036854775807LL")))
+        (t.= "0ULL" (tostring (fennel.eval "0ULL")))
+        (t.= "18446744073709551615ULL" (tostring (fennel.eval "18446744073709551615ULL")))
+        ;; case doesn't matter
+        (t.= "1LL" (tostring (fennel.eval "1lL")))
+        (t.= "1ULL" (tostring (fennel.eval "1uLl")))
+        ;; view and tostring match
+        (t.= "1LL" (fennel.view (fennel.eval "1ll")))
+        (t.= "1LL" (tostring (fennel.eval "1ll")))
+        (t.= "1ULL" (fennel.view (fennel.eval "1ull")))
+        (t.= "1ULL" (tostring (fennel.eval "1ull")))
+        ;; hex literals
+        (t.= "255LL" (tostring (fennel.eval "0xFFLL")))
+        (t.= "255ULL" (tostring (fennel.eval "0xFFULL")))
+        ;; binary literals
+        (t.= "5LL" (tostring (fennel.eval "0b101LL")))
+        (t.= "5ULL" (tostring (fennel.eval "0b101ULL")))
+        ;; underscores allowed
+        (t.= "1000000LL" (tostring (fennel.eval "1_000_000LL")))
+        (t.= "1000000ULL" (tostring (fennel.eval "1_000_000ULL")))
+        ;; bad input
+        (let [(ok? msg) (pcall fennel.eval "123L_L")]
+          (t.is (not ok?) "fall through to number parser when underscores between LL")
+          (t.match "could not read number \"123L_L\"" msg))
+        (let [(ok? msg) (pcall fennel.eval "123U_LL")]
+          (t.is (not ok?) "fall through to number parser when underscores between ULL")
+          (t.match "could not read number \"123U_LL\"" msg))
+        (let [(ok? msg) (pcall fennel.eval "1.5LL")]
+          (t.is (not ok?) "rejects decimal number with LL suffix")
+          (t.match "could not read 64%-bit integer literal \"1.5LL\"" msg))
+        (let [(ok? msg) (pcall fennel.eval "1.5LL")]
+          (t.is (not ok?) "rejects decimal number with LL suffix")
+          (t.match "could not read 64%-bit integer literal \"1.5LL\"" msg))
+        (let [(ok? msg) (pcall fennel.eval "1.5ULL")]
+          (t.is (not ok?) "rejects decimal number with ULL suffix")
+          (t.match "could not read 64%-bit integer literal \"1.5ULL\"" msg))
+        (let [(ok? msg) (pcall fennel.eval "1e3LL")]
+          (t.is (not ok?) "rejects exponent with LL suffix")
+          (t.match "could not read 64%-bit integer literal \"1e3LL\"" msg))
+        (let [(ok? msg) (pcall fennel.eval "1e3ULL")]
+          (t.is (not ok?) "rejects exponent with ULL suffix")
+          (t.match "could not read 64%-bit integer literal \"1e3ULL\"" msg))
+        (let [(ok? msg) (pcall fennel.eval "12aLL")]
+          (t.is (not ok?) "rejects non-number with LL suffix")
+          (t.match "could not read 64%-bit integer literal \"12aLL\"" msg))
+        (let [(ok? msg) (pcall fennel.eval "12aULL")]
+          (t.is (not ok?) "rejects non-number with ULL suffix")
+          (t.match "could not read 64%-bit integer literal \"12aULL\"" msg)))
+      (do
+        (let [(ok? msg) (pcall fennel.eval "1LL")]
+          (t.is (not ok?))
+          (t.match "64%-bit integer literal \"1LL\" is only supported on LuaJIT" msg))
+        (let [(ok? msg) (pcall fennel.eval "1ULL")]
+          (t.is (not ok?))
+          (t.match "64%-bit integer literal \"1ULL\" is only supported on LuaJIT" msg)))))
+
 (fn test-escapes []
   (parse= " " "\"\\032\"")
   (parse= " " "\"\\x20\"")
@@ -172,6 +232,7 @@
 
 {: test-basics
  : test-spicy-numbers
+ : test-64-bit-int-lits
  : test-control-codes
  : test-comments
  : test-prefixes

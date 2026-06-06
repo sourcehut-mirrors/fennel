@@ -200,6 +200,14 @@
         (and (= :string (type fst)) (not= nil (fst:find "^;"))))
       false))
 
+;; a copy of 'utils.luajit-64-bit-int?' to avoid a dependency cycle.
+(fn luajit-64-bit-int? [n]
+  "Returns true iff the input is a LuaJIT signed or unsigned 64-bit integer"
+  (case (pcall require :ffi)
+    (true ffi) (or (ffi.istype (ffi.typeof "long long") n)
+                   (ffi.istype (ffi.typeof "unsigned long long") n))
+    _ false))
+
 (fn pp-associative [t kv options indent]
   (var multiline? false)
   (let [id (. options.seen t)]
@@ -442,7 +450,7 @@ as numeric escapes rather than letter-based escapes, which is ugly."
                 (.. ":" x)
                 (= tv :string)
                 (pp-string x options indent)
-                (or (= tv :boolean) (= tv :nil))
+                (or (= tv :boolean) (= tv :nil) (luajit-64-bit-int? x))
                 (tostring x)
                 (.. "#<" (tostring x) ">")))))
 

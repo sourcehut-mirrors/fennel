@@ -367,10 +367,25 @@ Also returns a second function to clear the buffer in the byte stream."
             chars)))
 
     (fn parse-number [rawstr source]
-      ;; numbers can have underscores in the middle or end, but not at the start
-      (let [trimmed (and (not (rawstr:find "^_")) (: (rawstr:gsub "_" "") :lower))]
+      (let [case-folded (rawstr:lower)
+            ;; numbers can have underscores in the middle or end, but not at the start
+            trimmed (and (not (case-folded:find "^_")) (case-folded:gsub "_" ""))
+            leading-digit? (rawstr:match "^%d")]
         (if (or (= trimmed "nan") (= trimmed "-nan")) false ; 5.1 is weird
-            (rawstr:match "^%d")
+            (and trimmed (or leading-digit? (rawstr:match "^%-%d"))
+                 (or (case-folded:match "%xll$") (case-folded:match "%xull$")))
+            (do
+              (when (not (utils.luajit-vm?))
+                (parse-error (.. "64-bit integer literal \"" rawstr
+                                 "\" is only supported on LuaJIT")
+                             (- (length rawstr))))
+              (case (load (.. "return " trimmed))
+                chunk (dispatch (chunk) source rawstr)
+                nil (parse-error (.. "could not read 64-bit integer literal \""
+                                     rawstr "\"")
+                                 (- (length rawstr))))
+              true)
+            leading-digit?
             (do
               (dispatch (or (tonumber trimmed)
                             (parse-error (.. "could not read number \"" rawstr

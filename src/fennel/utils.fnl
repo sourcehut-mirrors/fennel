@@ -418,6 +418,13 @@ handlers will be skipped."
   "Call the relevant compiler plugin hooks for a given event"
   (hook-opts event root.options ...))
 
+(fn luajit-64-bit-int? [n]
+  "Returns true iff the input is a LuaJIT signed or unsigned 64-bit integer"
+  (case (pcall require :ffi)
+    (true ffi) (or (ffi.istype (ffi.typeof "long long") n)
+                   (ffi.istype (ffi.typeof "unsigned long long") n))
+    _ false))
+
 {: warn
  : allpairs
  : stablepairs
@@ -459,6 +466,8 @@ handlers will be skipped."
  : runtime-version
  : len
  : unpack : pack
+ : luajit-vm?
+ : luajit-64-bit-int?
  :fennel-module nil
  :path (table.concat [:./?.fnl :./?/init.fnl (getenv :FENNEL_PATH)] ";")
  :macro-path (table.concat [:./?.fnlm :./?/init.fnlm :./?.fnl

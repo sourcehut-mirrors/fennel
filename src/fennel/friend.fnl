@@ -31,6 +31,13 @@
      ["removing the non-digit character"
       "beginning the identifier with a non-digit if it is not meant to be a number"])
 
+(pal "64%-bit integer literal .* is only supported on LuaJIT"
+     ["removing the LL/ULL suffix"
+      "running the compiler on LuaJIT"])
+
+(pal "could not read 64%-bit integer literal (.*)"
+     ["removing any non-hexadecimal characters before the LL/ULL suffix"])
+
 (pal "expected a function.* to call"
      ["removing the empty parentheses"
       "using square brackets if you want an empty table"])
