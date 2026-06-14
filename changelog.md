@@ -14,6 +14,8 @@ deprecated forms.
 * Improve fallback line number reporting on errors from macros.
 * Macros (and specials) can now also be implemented as callable tables,
   allowing the introduction of new built-ins without scope conflicts.
+* Support signed and unsigned 64-bit integer literals on LuaJIT via
+  `LL` and `ULL` suffixes.
 
 ### Bug Fixes
 
