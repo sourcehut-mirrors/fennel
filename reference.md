@@ -106,7 +106,10 @@ Certain prefixes are expanded by the parser into longhand equivalents:
 * `,foo` expands to `(unquote foo)`
 
 A semicolon and everything following it up to the end of the line is a
-comment.
+comment and will be ignored. You can also comment forms by wrapping
+them in `(comment (ignored-things) (go-here))` which will be compiled
+into a nil rather than ignored entirely. The forms will appear in
+comments in the Lua code emitted by the compiler.
 
 ## Functions
 
