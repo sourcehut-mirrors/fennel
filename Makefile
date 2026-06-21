@@ -155,7 +155,7 @@ build/manfilter.lua: build/manfilter.fnl fennel.lua fennel
 	./fennel --correlate --compile $< > $@
 
 man: $(dir $(MAN_DOCS)) $(MAN_DOCS)
-man/man%/: ; mkdir -p $@
+
 man/man3/fennel-%.3: %.md build/manfilter.lua
 	$(MAN_PANDOC) $< -o $@
 	sed -i.tmp 's/\\f\[C\]/\\f[CR]/g' $@ # work around pandoc 2.x bug
