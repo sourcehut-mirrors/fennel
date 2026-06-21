@@ -8,6 +8,9 @@ deprecated forms.
 
 ## 1.7.0 / ???
 
+Fennel no longer publishes binary builds; it's recommended to use your
+package manager or download a script build instead.
+
 ### New Features
 
 * Support binding entire macro table with `&as` in `import-macros`.

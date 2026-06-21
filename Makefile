@@ -174,21 +174,14 @@ test-builds: fennel test/faith.lua
 	./fennel --metadata --eval "(require :test.init)"
 	$(MAKE) install PREFIX=/tmp/opt
 
-upload: guard-VERSION fennel fennel.lua fennel-bin
-	$(MAKE) fennel.exe CC=x86_64-w64-mingw32-gcc
+upload: guard-VERSION fennel fennel.lua
 	mkdir -p downloads/
 	mv fennel downloads/fennel-$(VERSION)
 	mv fennel.lua downloads/fennel-$(VERSION).lua
-	mv fennel-bin downloads/fennel-$(VERSION)-x86_64
-	mv fennel.exe downloads/fennel-$(VERSION).exe
 	gpg -ab downloads/fennel-$(VERSION)
 	gpg -ab downloads/fennel-$(VERSION).lua
-	gpg -ab downloads/fennel-$(VERSION)-x86_64
-	gpg -ab downloads/fennel-$(VERSION).exe
 	ssh-keygen -Y sign -f $(SSH_KEY) -n file downloads/fennel-$(VERSION)
 	ssh-keygen -Y sign -f $(SSH_KEY) -n file downloads/fennel-$(VERSION).lua
-	ssh-keygen -Y sign -f $(SSH_KEY) -n file downloads/fennel-$(VERSION)-x86_64
-	ssh-keygen -Y sign -f $(SSH_KEY) -n file downloads/fennel-$(VERSION).exe
 	rsync -rtAv downloads/fennel-$(VERSION)* \
 		fenneler@fennel-lang.org:fennel-lang.org/downloads/
 

@@ -5,41 +5,29 @@ computer. This document assumes you know how to run shell commands and
 edit configuration files in a UNIX-like environment.
 
 **Note**: Fennel can be used in non-UNIX environments, but those environments
-will mostly not be covered in this document.
+will not be covered in this document.
 
 Fennel does not contain any telemetry or spyware and never will.
 
 
-## Downloading Fennel
+## Installing Fennel
 
-Downloading Fennel on your computer allows you to run Fennel code and
-compile to Lua. You have a few options for how to install Fennel.
-
-
-### Downloading Fennel with a package manager
-
-Depending on what package manager you use on your system, you may be
-able to use it to install Fennel. See [the
-wiki](https://wiki.fennel-lang.org/Packaging) for a list of packaging
-systems which offer Fennel. Packaged versions of Fennel may lag behind
-the official releases and may only support one version at a time,
-but they tend to be the most convenient and support automatic updates.
-For instance, if you use Debian, it should be as easy as running
-`sudo apt install fennel`.
-
+Unless you have specific requirements for what version to use, it is
+strongly recommended that you install Fennel using your [package
+manager](https://wiki.fennel-lang.org/Packaging). For instance, if you
+use a Debian-based OS, it should be as easy as running `sudo apt
+install fennel`.
 
 ### Downloading the fennel script
 
-This method assumes you have Lua 5.1, 5.2, 5.3, 5.4, 5.5, or LuaJIT
-installed on your system.
-
-This method requires you to manually update the `fennel` script when
-you want to use a newer version that has come out.
+In the event that your package manager does not ship the version of
+Fennel you want, you can use the script instead. Use your package
+manager to install Lua 5.1, 5.2, 5.3, 5.4, 5.5, or LuaJIT, then:
 
 1. Download [the fennel script](https://fennel-lang.org/downloads/fennel-1.6.1)
 2. Run `chmod +x fennel-1.6.1` to make it executable
 3. Download [and verify](https://fennel-lang.org/security#signatures)
-   the [signature](https://fennel-lang.org/downloads/fennel-1.6.1.asc)
+   the [signature](https://fennel-lang.org/downloads/fennel-1.6.1.sig)
    (optional).
 4. Move `fennel-1.6.1` to a directory on your `$PATH`, such as `/usr/local/bin`
 
@@ -47,26 +35,14 @@ you want to use a newer version that has come out.
 you can leave the version in the name, which makes it easy to keep
 many versions of Fennel installed at once.
 
+### Building from source
 
-### Downloading a Fennel binary
+You can also build the script or binaries from source; it is a fairly
+quick process. Clone the repository from https://git.sr.ht/~technomancy/fennel
+and check the readme for details.
 
-Downloading a Fennel binary allows you to run Fennel on your computer without
-having to download Lua, if you are on a supported platform. If you
-already have Lua installed, it's better to use the script above.
-
-This method requires you to manually update the `fennel` binary when
-you want to use a newer version that has come out.
-
- 1. Choose one the options below, depending on your system:
-      - [GNU/Linux x86_64](https://fennel-lang.org/downloads/fennel-1.6.1-x86_64)
-        ([signature](https://fennel-lang.org/downloads/fennel-1.6.1-x86_64.asc))
-      - [Windows](https://fennel-lang.org/downloads/fennel-1.6.1.exe)
-        ([signature](https://fennel-lang.org/downloads/fennel-1.6.1.exe.asc))
- 2. Run `chmod +x fennel-1.6.1*` to make it executable
- 3. Download [and verify](https://fennel-lang.org/security#signatures) the signature
-    (optional).
- 4. Move the downloaded binary to a directory on your `$PATH`, such as `/usr/local/bin`
-
+Run `make fennel` for the script (requires having Lua installed) or
+`make fennel-bin` for the binary (requires a C compiler).
 
 ## Embedding Fennel
 
