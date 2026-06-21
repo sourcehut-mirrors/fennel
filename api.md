@@ -29,6 +29,10 @@ usually accept these fields:
   output. If the module name isn't a string literal that is resolvable at
   compile time it falls back to `require` at runtime. Can be used to embed both
   Fennel and Lua modules.
+* `skipInclude`: a sequential table of strings naming modules which should be
+  omitted from the compiled output when they would otherwise be embedded by
+  `include` or `requireAsInclude`. Such modules fall back to `require` at
+  runtime instead of being inlined.
 * `toBeClosed`: Use Lua 5.4+ to-be-closed variables when compiling
   `with-open` in order to avoid interfering with traces.
 * `assertAsRepl`: Replace calls to `assert` with `assert-repl` to
