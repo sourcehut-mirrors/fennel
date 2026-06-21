@@ -466,6 +466,7 @@ Can take an options table with the following keys:
 * :empty-as-sequence? (default: false) render empty tables as []
 * :line-length (number, default: 80) length of the line at which
   multi-line output for tables is forced
+* :initial-indent (number, default: 0) indentation level to start at
 * :escape-newlines? (default: false) emit strings with \\n instead of newline
 * :prefer-colon? (default: false) emit strings in colon notation when possible
 * :utf8? (default: true) whether to use the utf8 module to compute string lengths
@@ -484,4 +485,4 @@ be used, with the difference that after the first use, the options will be set t
 
 You can set a `__fennelview` metamethod on a table to override its serialization
 behavior; see the API reference for details."
-  (pp x (make-options x ?options) 0))
+  (pp x (make-options x ?options) (or (-?> ?options (. :initial-indent)) 0)))

@@ -19,6 +19,7 @@ package manager or download a script build instead.
   allowing the introduction of new built-ins without scope conflicts.
 * Support signed and unsigned 64-bit integer literals on LuaJIT via
   `LL` and `ULL` suffixes.
+* Support `:initial-indent` option in `fennel.view`.
 
 ### Bug Fixes
 

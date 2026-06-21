@@ -320,7 +320,11 @@
        (view {:a [1 2] :b [1 2] :c [1 2] :d [1 2]} {:line-length 0}))
   (t.= "[2 3 4]"
        (view [1 2 3]
-             {:preprocess (fn [x] (if (= (type x) :number) (+ x 1) x))})))
+             {:preprocess (fn [x] (if (= (type x) :number) (+ x 1) x))}))
+  (t.= "[\"ubiquitous\"
+                                                             \"mendacious\"
+                                                             \"polyglottal\"]"
+       (view [:ubiquitous :mendacious :polyglottal] {:initial-indent 60})))
 
 (fn test-kv-table []
   (t.= "{:a 1 \"a b\" 2}" (view {:a 1 "a b" 2}))
