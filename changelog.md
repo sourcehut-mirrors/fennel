@@ -13,6 +13,8 @@ package manager or download a script build instead.
 
 ### New Features
 
+* Accept third `fennel.traceback` argument for trimming traces from bottom.
+* Trim irrelevant internal frames from stack traces in repl errors.
 * Support binding entire macro table with `&as` in `import-macros`.
 * Improve fallback line number reporting on errors from macros.
 * Macros (and specials) can now also be implemented as callable tables,
@@ -23,6 +25,7 @@ package manager or download a script build instead.
 
 ### Bug Fixes
 
+* Fix issue where disabling saving repl locals would error out.
 * Fix some precedence issues with exponentiation operator `^`.
 
 ## 1.6.1 / 2025-12-30

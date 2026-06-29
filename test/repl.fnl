@@ -517,6 +517,26 @@
     (send ":lmao")
     (t.= "lmaohehelol" (send "(table.concat [*1 *2 *3])"))))
 
+(fn test-trace []
+  (let [out []
+        in ["(do (fn a [] (error :whoa) nil)
+                 (fn b [] (a) nil)
+                 (b) nil)"]
+        old-write io.write]
+    ;; this relies on the default onError setting, so we can't use wrap-repl;
+    ;; have to override io.write instead. saving locals clutters the trace too.
+    (set io.write #(table.insert out $))
+    (fennel.repl {:onValues #nil :saveLocals false :env {: error : pcall}
+                  :readChunk #(table.remove in 1)})
+    (set io.write old-write)
+    (t.= 1 (length out))
+    (let [lines (icollect [line (: (. out 1) :gmatch "([^\n]*)\n")] line)]
+      (t.match "whoa" (. lines 1))
+      (t.match "in function 'a'" (. lines 4))
+      (t.match "in function 'b'" (. lines 5))
+      (when (not _G.jit) ; luajit omits the last frame
+        (t.match "in main chunk" (. lines 6))))))
+
 (fn test-return []
   (let [opts {:readChunk #",return (.. :return :value)"
               :onValues #nil
@@ -572,6 +592,7 @@
      : test-custom-metadata-failing
      : test-long-string
      : test-save-values
+     : test-trace
      : test-return
      : test-decorating-repl
      : test-default-overrides

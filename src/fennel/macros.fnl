@@ -418,7 +418,7 @@ REPL `,return` command returns values to assert in place to continue execution."
          (let [opts# {:assert-repl? true}
                fennel# (require ,(fennel-module-name))
                locals# ,(add-locals (get-scope) [])]
-           (set opts#.message (fennel#.traceback message#))
+           (set opts#.message (fennel#.traceback message# 2 3))
            (each [k# v# (pairs _G)]
              (when (= nil (. locals# k#)) (tset locals# k# v#)))
            (set opts#.env locals#)

@@ -28,10 +28,10 @@
   (io.write "\n"))
 
 ;; fnlfmt: skip
-(fn default-on-error [errtype err]
+(fn default-on-error [frames errtype err]
   (io.write
    (case errtype
-     "Runtime" (.. (compiler.traceback (tostring err) 4) "\n")
+     "Runtime" (.. (compiler.traceback (tostring err) 4 frames) "\n")
      _ (: "%s error: %s\n" :format errtype (tostring err)))))
 
 (fn splice-save-locals [env lua-source scope]
@@ -356,9 +356,11 @@ For more information about the language, see https://fennel-lang.org/reference")
                       (try-readline! opts (pcall require :readline)))
         _ (when ?fennelrc (?fennelrc))
         env (specials.wrap-env (or opts.env (rawget _G :_ENV) _G))
+        frames (accumulate [n 3 _ (: (compiler.traceback) :gmatch "([^\n]*)\n")]
+                 (+ n 1))
         callbacks {:readChunk (or opts.readChunk default-read-chunk)
                    :onValues (or opts.onValues default-on-values)
-                   :onError (or opts.onError default-on-error)
+                   :onError (or opts.onError (partial default-on-error frames))
                    :pp (or opts.pp view)
                    :view-opts (or opts.view-opts {:depth 4})
                    :env env}
@@ -399,9 +401,10 @@ For more information about the language, see https://fennel-lang.org/reference")
         (callbacks.onValues out)))
 
     (fn save-value [...]
-      (set env.___replLocals___.*3 env.___replLocals___.*2)
-      (set env.___replLocals___.*2 env.___replLocals___.*1)
-      (set env.___replLocals___.*1 ...)
+      (when save-locals?
+        (set env.___replLocals___.*3 env.___replLocals___.*2)
+        (set env.___replLocals___.*2 env.___replLocals___.*1)
+        (set env.___replLocals___.*1 ...))
       ...)
 
     (set (opts.scope.manglings.*1 opts.scope.unmanglings._1) (values "_1" "*1"))

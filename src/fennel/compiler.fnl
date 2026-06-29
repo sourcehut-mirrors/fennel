@@ -969,7 +969,7 @@ which we have to do if we don't know."
 
 (local lua-getinfo (and _G.debug _G.debug.getinfo))
 
-(fn traceback [?msg ?start]
+(fn traceback [?msg ?start ?end]
   "A custom traceback function for Fennel that looks similar to debug.traceback.
 Use with xpcall to produce fennel specific stacktraces. Skips frames from the
 compiler by default; these can be re-enabled with export FENNEL_DEBUG=trace."
@@ -987,6 +987,8 @@ compiler by default; these can be re-enabled with export FENNEL_DEBUG=trace."
               (case (and lua-getinfo (lua-getinfo level :Sln))
                 nil (set lines.done? true)
                 info (table.insert lines (traceback-frame info))))
+            (when ?end
+              (for [_ 1 ?end] (table.remove lines)))
             (table.concat lines "\n"))))
     _ ?msg))
 
