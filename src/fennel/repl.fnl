@@ -48,6 +48,15 @@
           (body return) (.. body gap (table.concat binds " ") gap return)
           _ lua-source))))
 
+(fn splice-foil-tco [lua-source]
+  ;; Insert a function call to ensure the return value isn't in tail
+  ;; position. This preserves function names in the error traceback
+  ;; for things run in the REPL.
+  (let [gap (if (lua-source:find "\n") "\n" " ")]
+    (case (lua-source:match "^(.*)[\n ]return (.*)$")
+      (body value) (.. body gap "return (function(...) return ...; end)(" value ")")
+      _ lua-source)))
+
 (local commands {})
 
 (fn completer [env scope text ?fulltext _from _to]
@@ -434,7 +443,8 @@ For more information about the language, see https://fennel-lang.org/reference")
                                (doto opts (tset :source src-string)))
                 (true src) (let [src (if save-locals?
                                          (splice-save-locals env src opts.scope)
-                                         src)]
+                                         src)
+                                 src (splice-foil-tco src)]
                              (pcall specials.load-code src env))
                 (true chunk) (xpcall #(print-values (save-value (chunk)))
                                      (partial callbacks.onError :Runtime))

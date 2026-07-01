@@ -537,6 +537,23 @@
       (when (not _G.jit) ; luajit omits the last frame
         (t.match "in main chunk" (. lines 6))))))
 
+(fn test-trace-tco []
+  (let [out []
+        in ["(do (fn f [] (error :whoa)) (f))"]
+        old-write io.write]
+    ;; this relies on the default onError setting, so we can't use wrap-repl;
+    ;; have to override io.write instead. saving locals clutters the trace too.
+    (set io.write #(table.insert out $))
+    (fennel.repl {:onValues #nil :saveLocals false :env {: error : pcall}
+                  :readChunk #(table.remove in 1)})
+    (set io.write old-write)
+    (t.= 1 (length out))
+    (let [lines (icollect [line (: (. out 1) :gmatch "([^\n]*)\n")] line)]
+      (t.match "whoa" (. lines 1))
+      (t.match "in function 'f'" (. lines 4))
+      (when (not _G.jit) ; luajit omits the last frame
+        (t.match "in main chunk" (. lines 5))))))
+
 (fn test-return []
   (let [opts {:readChunk #",return (.. :return :value)"
               :onValues #nil
@@ -593,6 +610,7 @@
      : test-long-string
      : test-save-values
      : test-trace
+     : test-trace-tco
      : test-return
      : test-decorating-repl
      : test-default-overrides
