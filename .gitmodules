@@ -3,4 +3,4 @@
 	url = https://salsa.debian.org/lua-team/lua5.4
 [submodule "luajit"]
 	path = luajit
-	url = https://salsa.debian.org/lua-team/luajit2
+	url = https://salsa.debian.org/lua-team/luajit
