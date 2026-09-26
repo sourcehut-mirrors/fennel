@@ -9,8 +9,8 @@
 
 (local dotless? (not (string.find (. arg -1) "5%.")))
 (local lua-versions (if dotless?
-                        [:lua51 :lua52 :lua53 :lua54 :luajit]
-                        [:lua5.1 :lua5.2 :lua5.3 :lua5.4 :luajit]))
+                        [:lua51 :lua52 :lua53 :lua54]
+                        [:lua5.1 :lua5.2 :lua5.3 :lua5.4]))
 
 (local host-lua (let [long (case _VERSION
                              "Lua 5.1" (if _G.jit :luajit (. lua-versions 1))
@@ -47,7 +47,8 @@
 
 (fn test-lua-flag []
   ;; skip this when cli is not compiled or not running tests with `make testall`
-  (when (and test-all? (file-exists? "fennel"))
+  ;; or when running luajit, because then you can't tell whether to be dotless
+  (when (and test-all? (file-exists? "fennel") (not _G.jit))
     (let [;; running io.popen for all 20 combinations of lua versions is slow,
           ;; so we'll just pick the next one in the list after host-lua
           lua-exec (pick-lua)
