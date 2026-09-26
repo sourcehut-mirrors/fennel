@@ -174,6 +174,9 @@
 (pal "unexpected multi symbol (.*)"
      ["removing periods or colons from %s"])
 
+(pal "cannot declare dynamic binding"
+     ["replacing local/var with set" "declaring a symbol instead of a list"])
+
 (pal "unexpected vararg"
      ["putting \"...\" at the end of the fn parameters if the vararg was intended"])
 

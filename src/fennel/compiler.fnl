@@ -68,15 +68,15 @@ The ast arg should be unmodified so that its first element is the form called."
 (set scopes.compiler (make-scope scopes.global))
 (set scopes.macro scopes.global)
 
-(local serialize-string
-  (let [subst-digits {"\\7" "\\a" "\\8" "\\b" "\\9" "\\t" "\\10" "\\n"
-                      "\\11" "\\v" "\\12" "\\f" "\\13" "\\r"}]
-    (fn [str]
-      (-> (string.format "%q" str)
-          (: :gsub "\\\n" "\\n") ; keep it as one line
-          (: :gsub "(\\*)(\\%d%d?%d?)" #(if (= 0 (% ($1:len) 2))
-                                            (-?>> (. subst-digits $2) (.. $1))))
-          (: :gsub "[\127-\255]" #(.. "\\" ($:byte)))))))
+(local ^subst-digits {"\\7" "\\a" "\\8" "\\b" "\\9" "\\t" "\\10" "\\n"
+                      "\\11" "\\v" "\\12" "\\f" "\\13" "\\r"})
+
+(fn serialize-string [str]
+  (-> (string.format "%q" str)
+      (: :gsub "\\\n" "\\n") ; keep it as one line
+      (: :gsub "(\\*)(\\%d%d?%d?)" #(if (= 0 (% ($1:len) 2))
+                                        (-?>> (. ^subst-digits $2) (.. $1))))
+      (: :gsub "[\127-\255]" #(.. "\\" ($:byte)))))
 
 (fn global-mangling [str]
   "Turn a global symbol into a Lua-friendly expression."
@@ -730,6 +730,7 @@ which we have to do if we don't know."
         (compile1 from scope parent {: target})))
 
     (fn dynamic-set-target [[_ target & keys]]
+      (assert-compile (not declaration) "cannot declare dynamic binding" ast)
       (assert-compile (utils.sym? target) "dynamic set needs symbol target" ast)
       ;; symbol-to-expression validates target against scope.manglings, allowed
       ;; globals, and exceptions like $, $1...$9 in hashfn, so we omit here

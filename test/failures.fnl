@@ -99,6 +99,8 @@
   (assert-fail (let [x {:foo (fn [self] self.bar) :bar :baz}] x:foo)
                "multisym method calls may only be in call position")
   (assert-fail (local () 1) "at least one value")
+  (assert-fail (local (. _G :x) 9) "cannot declare dynamic binding")
+  (assert-fail (var (. _G :x) 9) "cannot declare dynamic binding")
   (assert-fail (set abc:def 2) "cannot set method sym")
   (assert-fail (let [nil 1] 9) "unable to bind")
   (assert-fail (let [[a & c d] [1 2]] c)

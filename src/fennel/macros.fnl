@@ -168,7 +168,7 @@ returns
   (assert (and (sequence? iter-tbl) (<= 2 (length iter-tbl)))
           "expected iterator binding table")
   (assert (not= nil key-expr) "expected key and value expression")
-  (assert (= nil ...)
+  (assert (= nil (pick-values 1 ...))
           "expected 1 or 2 body expressions; wrap multiple expressions with do")
   (assert (or value-expr (list? key-expr)) "need key and value")
   (let [kv-expr (if (= nil value-expr) key-expr `(values ,key-expr ,value-expr))
@@ -186,7 +186,7 @@ returns
 Iteration code only differs in using the for or each keyword, the rest
 of the generated code is identical."
   (assert (not= nil value-expr) "expected table value expression")
-  (assert (= nil ...)
+  (assert (= nil (pick-values 1 ...))
           "expected exactly one body expression. Wrap multiple expressions in do")
   (let [(into intoless-iter) (extract-into iter-tbl (copy iter-tbl))]
     (if into
@@ -250,7 +250,7 @@ Supports early termination with an &until clause."
   (assert (and (sequence? iter-tbl) (<= 4 (length iter-tbl)))
           "expected initial value and iterator binding table")
   (assert (not= nil body) "expected body expression")
-  (assert (= nil ...)
+  (assert (= nil (pick-values 1 ...))
           "expected exactly one body expression. Wrap multiple expressions with do")
   (let [[accum-var accum-init] iter-tbl
         iter (sym (if for? "for" "each"))] ; accumulate or faccumulate?
