@@ -45,6 +45,9 @@ usually accept these fields:
   Defaults to a table containing limited known-safe globals. Pass `_G` to
   disable sandboxing.
 * `unfriendly`: disable friendly compiler/parser error messages.
+* `warn`: a function called instead of printing warnings to stderr. It receives
+  the message, the AST node the warning applies to, the filename, line, and
+  column; all but the message may be nil.
 * `plugins`: list of compiler [plugins](#plugins).
 * `error-pinpoint`: a list of two strings indicating what to wrap compile errors in
 * `keywords`: a table of the form `{:keyword1 true :keyword2 true}` containing
@@ -281,14 +284,15 @@ end
 
 The first argument can either be a string or a function that returns
 one byte at a time. It takes two optional arguments; a filename
-and a table of options. Supported options are both booleans that
-default to false:
+and a table of options. Supported options:
 
-* `unfriendly`: disable enhanced parse error reporting
-* `comments`: include comment nodes in AST
+* `unfriendly`: disable enhanced parse error reporting (default: false)
+* `comments`: include comment nodes in AST (default: false)
 * `plugins`: *(since 1.2.0)* An optional list of compiler [plugins](#plugins).
+* `warn`: *(since 1.5.2)* a function called instead of printing warnings to
+  stderr; see the common options above.
 
-The list of common options at the top of this document do not apply here.
+The list of other common options at the top of this document do not apply here.
 
 ## AST node definition
 
@@ -689,6 +693,7 @@ the rest of the plugins for a given event to be skipped.
 * `do`
 * `fn`
 * `destructure`
+* `parse-form`
 * `parse-error`
 * `assert-compile`
 
@@ -697,12 +702,19 @@ taking `ast` and `scope` it takes a `from` which is the AST for the value
 being destructured and a `to` AST which is the AST for the form being
 destructured to. This is most commonly a symbol but can be a list or a table.
 
-The `parse-error` and `assert-compile` hooks can be used to override how fennel
-behaves down to the parser and compiler levels. Possible use-cases
-include building atop `fennel.view` to serialize data with
-[EDN](https://clojure.github.io/clojure/clojure.edn-api.html)-style tagging,
-or manipulating external s-expression-based syntax, such as
-[tree-sitter queries](https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax).
+The `parse-form` extension point runs on each node as soon as it is read. It
+takes the node, a table of source data, the raw string the node was read from,
+and the parser's stack of enclosing forms still being read. Source data is only
+passed for strings, numbers, and booleans; `fennel.ast-source` can be used to
+get source data for the other node types. The raw string is only passed for
+strings and numbers. A non-nil return value replaces the node.
+
+The `parse-form`, `parse-error`, and `assert-compile` hooks can be used to
+override how fennel behaves down to the parser and compiler levels. Possible
+use-cases include building atop `fennel.view` to serialize data with
+[EDN](https://clojure.github.io/clojure/clojure.edn-api.html)-style tagging, or
+manipulating external s-expression-based syntax, such as [tree-sitter
+queries](https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax).
 
 The `scope` argument is a table containing all the compiler's information
 about the current scope. Most of the tables here look up values in their
