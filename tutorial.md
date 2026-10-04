@@ -139,7 +139,9 @@ work here in prefix form. Note that numbers are double-precision floats in all
 Lua versions prior to 5.3, which introduced integers. On 5.3 and
 up, integer division uses `//` and bitwise operations use `lshift`, `rshift`,
 `bor`, `band`, `bnot` and `xor`. Bitwise operators and integer division will
-not work if the host Lua environment is older than version 5.3.
+not work out of the box if the host Lua environment is older than
+version 5.3, but the `--use-bit-lib` flag can make bitwise operations
+compile to LuaJIT-compatible equivalents.
 
 You may also use underscores to separate sections of long numbers. The
 underscores have no effect on the value.
