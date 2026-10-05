@@ -102,6 +102,23 @@
           "readline completion of bare `,` should list all commands")
     (t.= ",complete" (send ",complete ,complete ,complete"))))
 
+(fn test-hyphenated-local-completion []
+  (let [(send comp) (wrap-repl)]
+    (send (v (local my-tbl {:abc 1 :fff (fn [] :val)})))
+    (assert-equal-unordered ["my-tbl.abc" "my-tbl.fff"] (comp "my-tbl.")
+                            "completion descends into hyphenated locals")
+    (t.= ["my-tbl.abc"] (comp "my-tbl.a")
+         "key completion works on hyphenated locals")))
+
+(fn test-nested-key-completion-ignores-local-mangling []
+  (let [(send comp) (wrap-repl)]
+    (send (v (local some-key 1)))
+    (send (v (local my-tbl {:some-key {:q 1} :some_key {:other 2}})))
+    (t.= ["my-tbl.some-key.q"] (comp "my-tbl.some-key.")
+         "nested hyphenated key is looked up by its own name")
+    (t.= ["my-tbl.some_key.other"] (comp "my-tbl.some_key.")
+         "underscored key is not confused with the hyphenated one")))
+
 (fn test-help []
   (let [send (wrap-repl)
         help (send ",help")]
@@ -593,6 +610,8 @@
      : test-long-string
      : test-save-values
      : test-trace
+     : test-hyphenated-local-completion
+     : test-nested-key-completion-ignores-local-mangling
      : test-return
      : test-decorating-repl
      : test-default-overrides

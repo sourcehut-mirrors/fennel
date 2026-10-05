@@ -74,12 +74,13 @@
     (fn descend [input tbl prefix add-matches method?]
       (let [splitter (if method? "^([^:]+):(.*)" "^([^.]+)%.(.*)")
             (head tail) (input:match splitter)
-            raw-head (or (. scope.manglings head) head)]
-        (when (= (type (. tbl raw-head)) :table)
+            raw-head (or (. scope.manglings head) head)
+            target (or (. tbl head) (. tbl raw-head))]
+        (when (= (type target) :table)
           (set stop-looking? true)
           (if method?
-              (add-partials tail (. tbl raw-head) (.. prefix head ":"))
-              (add-matches tail (. tbl raw-head) (.. prefix head))))))
+              (add-partials tail target (.. prefix head ":"))
+              (add-matches tail target (.. prefix head))))))
 
     (fn add-matches [input tbl ?prefix]
       (let [prefix (if ?prefix (.. ?prefix ".") "")]
