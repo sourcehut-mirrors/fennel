@@ -24,10 +24,10 @@ In the event that your package manager does not ship the version of
 Fennel you want, you can use the script instead. Use your package
 manager to install Lua 5.1, 5.2, 5.3, 5.4, 5.5, or LuaJIT, then:
 
-1. Download [the fennel script](https://fennel-lang.org/downloads/fennel-1.6.1)
+1. Download [the fennel script](https://download.fennel-lang.org/fennel-1.6.1)
 2. Run `chmod +x fennel-1.6.1` to make it executable
 3. Download [and verify](https://fennel-lang.org/security#signatures)
-   the [signature](https://fennel-lang.org/downloads/fennel-1.6.1.sig)
+   the [signature](https://download.fennel-lang.org/fennel-1.6.1.sig)
    (optional).
 4. Move `fennel-1.6.1` to a directory on your `$PATH`, such as `/usr/local/bin`
 
@@ -70,7 +70,7 @@ them all here; please [see the wiki page on distribution for details](https://wi
 
 The Fennel compiler can be added to your application and then loaded from Lua.
 
- 1. Add [fennel.lua](https://fennel-lang.org/downloads/fennel-1.6.1.lua) to your code repository.
+ 1. Add [fennel.lua](https://download.fennel-lang.org/fennel-1.6.1.lua) to your code repository.
  2. Add the following line to your Lua code:
 
 ```lua

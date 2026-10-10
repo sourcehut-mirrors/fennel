@@ -177,7 +177,7 @@ upload: guard-VERSION fennel fennel.lua
 	ssh-keygen -Y sign -f $(SSH_KEY) -n file downloads/fennel-$(VERSION)
 	ssh-keygen -Y sign -f $(SSH_KEY) -n file downloads/fennel-$(VERSION).lua
 	rsync -rtAv downloads/fennel-$(VERSION)* \
-		fenneler@fennel-lang.org:fennel-lang.org/downloads/
+		fenneldl@download.fennel-lang.org:download.fennel-lang.org
 
 release: guard-VERSION upload
 	git tag -v $(VERSION) # created by prerelease target
