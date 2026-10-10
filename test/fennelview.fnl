@@ -466,6 +466,8 @@
                 (view styles {:prefer-colon? true})
                 (view styles {:prefer-colon? false})]
                {:one-line? true})))
+  ;; for some reason Lua allows metatables to not be tables?!
+  (t.= "[1 2 3]" (view (setmetatable [1 2 3] {:__metatable false})))
   (t.= "[\"empty-table\" [1] {:x \"empty-table\" :empty-table [2]}]"
        (view [[] [1] {:x [] [] [2]}]
              {:preprocess (fn [x] (if (and (= (type x) :table) (= (next x) nil))

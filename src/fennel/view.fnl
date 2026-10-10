@@ -289,7 +289,8 @@
   ;; sequential tables, as well as tables, that contain __fennelview
   ;; metamethod.
   (set options.level (+ options.level 1))
-  (let [x (case (if (getopt options :metamethod?) (-?> x getmetatable (. :__fennelview)))
+  (let [x (case (if (getopt options :metamethod?)
+                    (case (getmetatable x) {: __fennelview} __fennelview))
             metamethod (pp-metamethod x metamethod options indent)
             _ (case (table-kv-pairs x options)
                 (_ :empty) (if (getopt options :empty-as-sequence?) "[]" "{}")
