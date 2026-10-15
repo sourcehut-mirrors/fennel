@@ -224,7 +224,10 @@
     (t.is (not ok?))
     (t.match ".*module name must compile to string.*" msg)))
 
-(fn no-codes [s] (s:gsub "\027%[[0-9]m" ""))
+(fn no-codes [s]
+  (if (os.getenv "NO_COLOR")
+      (-> s (: :gsub ">>>" "") (: :gsub "<<<" ""))
+      (s:gsub "\027%[[0-9]m" "")))
 
 ;; automated tests for suggestions are rudimentary because the usefulness of the
 ;; output is so subjective. to see a full catalog of suggestions, run the script

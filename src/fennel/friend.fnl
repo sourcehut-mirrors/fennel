@@ -223,12 +223,15 @@
                   (- (or (utf8.offset str (+ end 1)) (+ (utf8.len str) 1)) 1))
       (string.sub str start (math.min end (str:len)))))
 
+(local no-color? (and os os.getenv (os.getenv "NO_COLOR")))
+
 (fn highlight-line [codeline col ?endcol {: error-pinpoint}]
-  (if (or (= false error-pinpoint) (and os os.getenv (os.getenv "NO_COLOR")))
+  (if (= false error-pinpoint)
       codeline
       (let [endcol (or ?endcol col)
             eol (if utf8-ok? (utf8.len codeline) (string.len codeline))
-            [open close] (or error-pinpoint ["\027[7m" "\027[0m"])]
+            [open close] (or error-pinpoint (and no-color? [">>>" "<<<"])
+                             ["\027[7m" "\027[0m"])]
         (.. (sub codeline 1 col) open
             (sub codeline (+ col 1) (+ endcol 1))
             close (sub codeline (+ endcol 2) eol)))))

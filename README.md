@@ -103,12 +103,12 @@ This requires GNU Make and Lua (5.1-5.5 or LuaJIT).
 1. `cd` to a directory in which you want to download Fennel, such as `~/src`
 2. Run `git clone https://git.sr.ht/~technomancy/fennel`
 3. Run `cd fennel`
-4. Run `make fennel` to create a standalone script called `fennel`
-5. Run `sudo make install` to install system-wide (or `make install
+4. Run `gmake fennel` to create a standalone script called `fennel`
+5. Run `sudo gmake install` to install system-wide (or `gmake install
    PREFIX=$HOME` if `~/bin` is on your `$PATH`)
 
 If you don't have Lua already installed on your system, you can run
-`make fennel-bin LUA=lua/src/lua` instead to build a standalone binary
+`gmake fennel-bin LUA=lua/src/lua` instead to build a standalone binary
 that has its own internal version of Lua. This requires having a C
 compiler installed; normally `gcc`.
 
@@ -117,7 +117,7 @@ work on the source.
 
 ## License
 
-Unless otherwise listed, all files are copyright © 2016-2025 Calvin
+Unless otherwise listed, all files are copyright © 2016-2026 Calvin
 Rose and contributors, released under the [MIT license](LICENSE).
 
 The file `test/faith.fnl` is copyright © 2009-2025 Scott Vokes, Phil

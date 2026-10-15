@@ -22,9 +22,6 @@ MAN_PANDOC = pandoc -f gfm -t man -s --lua-filter=build/manfilter.lua \
 	     --metadata author="Fennel Maintainers" \
 	     --variable footer="fennel $(shell ./fennel -e '(. (require :fennel) :version)')"
 
-unexport NO_COLOR # this causes test failures
-unexport FENNEL_PATH FENNEL_MACRO_PATH # ensure isolation
-
 build: fennel fennel.lua
 
 test: fennel.lua fennel test/faith.lua
@@ -62,8 +59,7 @@ fennel.lua: $(SRC) bootstrap/aot.lua $(PRECOMPILED)
 
 bootstrap/macros.lua: src/fennel/macros.fnl; $(LUA) bootstrap/aot.lua $< --macro > $@
 bootstrap/match.lua: src/fennel/match.fnl; $(LUA) bootstrap/aot.lua $< --macro > $@
-bootstrap/view.lua: src/fennel/view.fnl
-	FENNEL_PATH=src/?.fnl $(LUA) bootstrap/aot.lua $< > $@
+bootstrap/view.lua: src/fennel/view.fnl; $(LUA) bootstrap/aot.lua $< > $@
 
 test/faith.lua: test/faith.fnl
 	$(LUA) bootstrap/aot.lua $< > $@
