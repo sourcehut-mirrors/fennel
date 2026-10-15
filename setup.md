@@ -160,53 +160,12 @@ support enables user-friendly features, such as:
 See [the wiki page on readline](https://wiki.fennel-lang.org/Readline)
 for details of how to install and configure it on your system.
 
-## Making games with Fennel
+## Making Fennel Games with LÖVE
 
-The two main platforms for making games with Fennel are
-[TIC-80](https://tic80.com) and [LÖVE](https://love2d.org/).
-
-TIC-80 is software that acts as a simulated computer in which you can write
-code, design art, compose music, and lay out maps for games. TIC-80
-also makes it easy for you to publish and share the games you make
-with others. TIC-80 introduces restrictions such as low resolution and
-limited memory to emulate retro game styles.
-
-LÖVE is a game-making framework for the Lua programming language. LÖVE
-is more flexible than TIC-80 in that it allows you to import from
-external resources and use any resolution or memory you like, but at a
-cost in that it is more complicated to make games in and more
-difficult to run in the browser.
-
-Both TIC-80 and LÖVE offer cross-platform support across Windows, Mac,
-and Linux systems, but TIC-80 games can be played in the browser and
-LÖVE games cannot without more complex 3rd-party tools.
-
-The [Fennel wiki](https://wiki.fennel-lang.org/Codebases) links
-to many games made in both systems you can study.
-
-
-### Using Fennel in TIC-80
-
-Support for Fennel is built into TIC-80. If you want to use the
-built-in text editor, you don't need any other tools, just launch
-TIC-80 and run `new fennel` in its console to get started.
-
-The [TIC-80 wiki](https://github.com/nesbox/TIC-80/wiki) documents
-the functions to use and important concepts.
-
-All TIC-80 games allow you to view and edit the source and assets. Try
-loading this [Conway's Life](https://tic80.com/play?cart=656) game
-to see how it's made:
-
-  * Click "start" to begin
-  * Press the Esc key and click "Close game"
-  * Press Esc again to see the code
-
-
-### Using Fennel with LÖVE
-
-LÖVE has no built-in support for Fennel, so you will need to setup
-support yourself, similar to [Embedding Fennel](#embedding-fennel) above.
+The recommended way to make games with Fennel is with
+[LÖVE](https://love2d.org/). LÖVE has no built-in support for Fennel, so you
+will need to setup support yourself, similar to [Embedding
+Fennel](#embedding-fennel) above.
 
 This [project skeleton for LÖVE](https://codeberg.org/alexjgriffith/min-love2d-fennel)
 shows you how to setup support for Fennel and how to setup a
