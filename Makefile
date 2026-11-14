@@ -43,9 +43,10 @@ count: ; cloc $(CORE_SRC); cloc $(LIB_SRC) ; cloc $(SRC)
 # install https://git.sr.ht/~technomancy/fnlfmt manually for this:
 format: ; for f in $(SRC); do fnlfmt --fix $$f ; done
 
+SHEBANG ?= "\#!/usr/bin/env $(LUA)"
 # All-in-one pure-lua script:
 fennel: src/launcher.fnl $(SRC) bootstrap/aot.lua $(PRECOMPILED)
-	@echo "#!/usr/bin/env $(LUA)" > $@
+	@echo "$(SHEBANG)" > $@
 	@echo "-- SPDX-License-Identifier: MIT" >> $@
 	@echo "-- SPDX-FileCopyrightText: Calvin Rose and contributors" >> $@
 	FENNEL_PATH=src/?.fnl $(LUA) bootstrap/aot.lua $< --require-as-include >> $@
