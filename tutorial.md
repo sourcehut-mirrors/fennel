@@ -594,24 +594,45 @@ code just the same as they would be from Lua.
 
 ## Modules and multiple files
 
-You can use the `require` function to load code from other files.
+Imagine you have a bunch of math functions in `mymath.fnl`:
 
 ```fennel
-(let [lume (require :lume)
-      tbl [52 99 412 654]
-      plus (fn [x y] (+ x y))]
-  (lume.map tbl (partial plus 2))) ; -> [54 101 414 656]
+(fn calculate-matrix-successor [m n]
+  ...)
+
+(fn add-dimensional-factor [data dimension]
+  ...)
+
+{: calculate-matrix-successor
+ : add-dimensional-factor}
+
+;; remember, this is shorthand for keys that repeat the values:
+;; {:calculate-matrix-successor calculate-matrix-successor
+;;  :add-dimensional-factor add-dimensional-factor}
 ```
 
-Modules in Fennel and Lua are simply tables which contain functions
-and other values.  The last value in a Fennel file will be used as the
-value of the whole module. Technically this can be any value, not just a
-table, but using a table is most common for good reason.
+The table at the bottom of the file is the value exported by the
+module. All values other than the final form in the file is local to
+the scope of that file and not visible elsewhere. The exported value
+can be any type, but it is usually a table.
 
-To require a module that's in a subdirectory, take the file name,
-replace the slashes with dots, and remove the extension, then pass
-that to `require`. For instance, a file called `lib/ui/menu.lua` would
-be read when loading the module `lib.ui.menu`.
+You can use the `require` function to load the module's table from
+other files. Usually it is put in a top-level `local` call, but it
+could be loaded from inside a function if desired.
+
+```fennel
+(local mymath (require :mymath))
+
+(let [tbl [52 99 412 654]]
+  (print (mymath.add-dimensional-factor tbl 32)))
+```
+
+This assumes that the file being required is in the same directory the
+program is being run or compiled from. To require a module that's in a
+subdirectory, take the file name, replace the slashes with dots, and
+remove the extension, then pass that to `require`. For instance, a
+file called `lib/ui/menu.lua` would be read when loading the module
+`lib.ui.menu`.
 
 When you run your program with the `fennel` command, you can call
 `require` to load Fennel or Lua modules. But in other contexts (such
