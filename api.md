@@ -709,6 +709,23 @@ passed for strings, numbers, and booleans; `fennel.ast-source` can be used to
 get source data for the other node types. The raw string is only passed for
 strings and numbers. A non-nil return value replaces the node.
 
+The `parse-error` extension point runs when the parser hits malformed input. It
+takes the error message, the filename, line, column, the source text being
+parsed, and a function which resets the compiler's state. The source text may
+be nil when parsing from a function rather than a string. A non-nil return
+value suppresses the error and the parser proceeds; at the end of input, any
+forms still open are closed as if their closing delimiters were present. A hook
+that raises its own error should call the reset function first.
+
+The `assert-compile` extension point runs when the compiler hits a compile
+error. It takes the failed condition (always false or nil), the error message,
+the AST node the error applies to, and a function which resets the compiler's
+state. If the node has no source data, the macro call currently being expanded
+is passed instead; if neither is available, the node is nil. A non-nil return
+value suppresses the error and compilation proceeds, which may result in
+incorrect output or a later error. As with `parse-error`, a hook that raises
+its own error should call the reset function first.
+
 The `parse-form`, `parse-error`, and `assert-compile` hooks can be used to
 override how fennel behaves down to the parser and compiler levels. Possible
 use-cases include building atop `fennel.view` to serialize data with
