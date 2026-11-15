@@ -145,7 +145,7 @@ uninstall:
 build/manfilter.lua: build/manfilter.fnl fennel.lua fennel
 	./fennel --correlate --compile $< > $@
 
-man: $(dir $(MAN_DOCS)) $(MAN_DOCS)
+man: $(MAN_DOCS)
 
 man/man3/fennel-%.3: %.md build/manfilter.lua
 	$(MAN_PANDOC) $< -o $@
@@ -201,9 +201,6 @@ guard-VERSION:
 	man upload prerelease release guard-VERSION test-builds lint
 
 # Steps to release a new Fennel version
-
-# The `make release` command should be run on a system with the lowest
-# available glibc for maximum compatibility.
 
 # 1. Check for changes which need to be mentioned in help text or man page
 # 2. Date `changelog.md` and update download links in `setup.md`
